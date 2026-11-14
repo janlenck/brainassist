@@ -1,0 +1,68 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Підключення до Brain Call",
+        "description": "Brain Assist передає запити асистента Home Assistant до Brain Call (версія 1.11.0 або новіша). API-токен міститься у файлі api-token.txt у теці застосунку Brain Call, або це токен, який ви там задали як API-токен.",
+        "data": {
+          "url": "Адреса Brain Call",
+          "token": "API-токен"
+        },
+        "data_description": {
+          "url": "Якщо Brain Call працює як застосунок на цій системі: http://127.0.0.1:8099",
+          "token": "Без нього Brain Call не відповідає на жоден запит, навіть із цієї системи."
+        }
+      },
+      "reconfigure": {
+        "title": "Змінити підключення до Brain Call",
+        "data": {
+          "url": "Адреса Brain Call",
+          "token": "API-токен"
+        },
+        "data_description": {
+          "url": "Якщо Brain Call працює як застосунок на цій системі: http://127.0.0.1:8099",
+          "token": "З файлу api-token.txt у теці застосунку Brain Call або заданий там API-токен."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Новий API-токен для Brain Call",
+        "description": "Brain Call за адресою {url} відхилив збережений токен.",
+        "data": {
+          "token": "API-токен"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Brain Call недоступний за цією адресою. Чи запущено застосунок і чи правильна адреса?",
+      "invalid_auth": "Brain Call відхилив токен.",
+      "too_old": "Цей Brain Call застарий для Brain Assist. Оновіть Brain Call до версії 1.11.0 або новішої.",
+      "too_new": "Цей Brain Call новіший, ніж розуміє Brain Assist. Оновіть Brain Assist.",
+      "unknown": "Адреса відповіла не так, як Brain Call. Подробиці в журналі."
+    },
+    "abort": {
+      "already_configured": "Цей Brain Call уже налаштовано.",
+      "reauth_successful": "Новий токен працює.",
+      "reconfigure_successful": "Підключення змінено."
+    }
+  },
+  "entity": {
+    "conversation": {
+      "voice": {
+        "name": "Голос"
+      },
+      "text": {
+        "name": "Текст"
+      }
+    }
+  },
+  "issues": {
+    "brain_call_too_old": {
+      "title": "Brain Call застарий для Brain Assist",
+      "description": "Brain Call {version} використовує версію {server_api} свого API, а Brain Assist потребує версію {client_api}. Оновіть застосунок Brain Call. Після цього Brain Assist підключиться сам."
+    },
+    "brain_assist_too_old": {
+      "title": "Brain Assist застарий для Brain Call",
+      "description": "Brain Call {version} використовує версію {server_api} свого API, а Brain Assist розуміє лише версію {client_api}. Оновіть Brain Assist у Marketplace і перезапустіть Home Assistant."
+    }
+  }
+}

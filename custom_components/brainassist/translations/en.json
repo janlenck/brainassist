@@ -1,0 +1,68 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Brain Call",
+        "description": "Brain Assist forwards the requests of Home Assistant's assistant to Brain Call (version 1.11.0 or newer). The API token is in the file api-token.txt in the folder of the Brain Call app, or it is the one you set as API token there.",
+        "data": {
+          "url": "Address of Brain Call",
+          "token": "API token"
+        },
+        "data_description": {
+          "url": "With Brain Call as an app on this system: http://127.0.0.1:8099",
+          "token": "Without it Brain Call answers no request, not even from this system."
+        }
+      },
+      "reconfigure": {
+        "title": "Change the connection to Brain Call",
+        "data": {
+          "url": "Address of Brain Call",
+          "token": "API token"
+        },
+        "data_description": {
+          "url": "With Brain Call as an app on this system: http://127.0.0.1:8099",
+          "token": "From api-token.txt in the folder of the Brain Call app, or the API token set there."
+        }
+      },
+      "reauth_confirm": {
+        "title": "New API token for Brain Call",
+        "description": "Brain Call at {url} refused the stored token.",
+        "data": {
+          "token": "API token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Brain Call cannot be reached at this address. Is the app running, and is the address right?",
+      "invalid_auth": "Brain Call refused the token.",
+      "too_old": "This Brain Call is too old for Brain Assist. Update Brain Call to 1.11.0 or newer.",
+      "too_new": "This Brain Call is newer than Brain Assist understands. Update Brain Assist.",
+      "unknown": "The address did not answer like Brain Call. The log has the details."
+    },
+    "abort": {
+      "already_configured": "This Brain Call is already set up.",
+      "reauth_successful": "The new token works.",
+      "reconfigure_successful": "The connection was changed."
+    }
+  },
+  "entity": {
+    "conversation": {
+      "voice": {
+        "name": "Voice"
+      },
+      "text": {
+        "name": "Text"
+      }
+    }
+  },
+  "issues": {
+    "brain_call_too_old": {
+      "title": "Brain Call is too old for Brain Assist",
+      "description": "Brain Call {version} speaks version {server_api} of its API, Brain Assist needs version {client_api}. Update the Brain Call app. Brain Assist connects again by itself afterwards."
+    },
+    "brain_assist_too_old": {
+      "title": "Brain Assist is too old for Brain Call",
+      "description": "Brain Call {version} speaks version {server_api} of its API, Brain Assist only understands version {client_api}. Update Brain Assist in the Marketplace and restart Home Assistant."
+    }
+  }
+}

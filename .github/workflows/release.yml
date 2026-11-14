@@ -1,0 +1,30 @@
+name: Release
+
+# The Marketplace (HACS) installs GitHub releases. A new version in manifest.json on main creates the release
+# v<version> with generated notes.
+on:
+  push:
+    branches: [main]
+    paths: [custom_components/brainassist/manifest.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create the release for the version in manifest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python3 -c "import json; print(json.load(open('custom_components/brainassist/manifest.json'))['version'])")
+          if [ -z "$version" ]; then echo "::error::no version in manifest.json"; exit 1; fi
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "Release v$version already exists"
+          else
+            gh release create "v$version" --target "$GITHUB_SHA" --title "v$version" --generate-notes
+            echo "Created release v$version"
+          fi

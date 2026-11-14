@@ -1,0 +1,68 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit Brain Call verbinden",
+        "description": "Brain Assist reicht die Anfragen des Assistenten von Home Assistant an Brain Call weiter (Version 1.11.0 oder neuer). Der API-Token steht in der Datei api-token.txt im Ordner der Brain-Call-App, oder es ist der Token, den du dort als API-Token gesetzt hast.",
+        "data": {
+          "url": "Adresse von Brain Call",
+          "token": "API-Token"
+        },
+        "data_description": {
+          "url": "Mit Brain Call als App auf diesem System: http://127.0.0.1:8099",
+          "token": "Ohne ihn beantwortet Brain Call keine Anfrage, auch nicht von diesem System."
+        }
+      },
+      "reconfigure": {
+        "title": "Verbindung zu Brain Call ändern",
+        "data": {
+          "url": "Adresse von Brain Call",
+          "token": "API-Token"
+        },
+        "data_description": {
+          "url": "Mit Brain Call als App auf diesem System: http://127.0.0.1:8099",
+          "token": "Aus api-token.txt im Ordner der Brain-Call-App, oder der dort gesetzte API-Token."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Neuer API-Token für Brain Call",
+        "description": "Brain Call unter {url} hat den gespeicherten Token abgelehnt.",
+        "data": {
+          "token": "API-Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Brain Call ist unter dieser Adresse nicht erreichbar. Läuft die App, und stimmt die Adresse?",
+      "invalid_auth": "Brain Call hat den Token abgelehnt.",
+      "too_old": "Dieses Brain Call ist zu alt für Brain Assist. Aktualisiere Brain Call auf 1.11.0 oder neuer.",
+      "too_new": "Dieses Brain Call ist neuer, als Brain Assist versteht. Aktualisiere Brain Assist.",
+      "unknown": "Die Adresse hat nicht wie Brain Call geantwortet. Details stehen im Log."
+    },
+    "abort": {
+      "already_configured": "Dieses Brain Call ist bereits eingerichtet.",
+      "reauth_successful": "Der neue Token funktioniert.",
+      "reconfigure_successful": "Die Verbindung wurde geändert."
+    }
+  },
+  "entity": {
+    "conversation": {
+      "voice": {
+        "name": "Sprache"
+      },
+      "text": {
+        "name": "Text"
+      }
+    }
+  },
+  "issues": {
+    "brain_call_too_old": {
+      "title": "Brain Call ist zu alt für Brain Assist",
+      "description": "Brain Call {version} spricht Version {server_api} seiner API, Brain Assist braucht Version {client_api}. Aktualisiere die Brain-Call-App. Brain Assist verbindet sich danach von selbst wieder."
+    },
+    "brain_assist_too_old": {
+      "title": "Brain Assist ist zu alt für Brain Call",
+      "description": "Brain Call {version} spricht Version {server_api} seiner API, Brain Assist versteht nur Version {client_api}. Aktualisiere Brain Assist im Marketplace und starte Home Assistant neu."
+    }
+  }
+}

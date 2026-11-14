@@ -1,0 +1,18 @@
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.lint]
+# F = undefined names, unused imports …; E/W = pycodestyle; B = bugbear (likely bugs); BLE = blind except;
+# I = import order; UP = newer syntax; ASYNC = blocking calls in async code
+select = ["F", "E", "W", "B", "BLE", "I", "UP", "ASYNC"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["custom_components"]
+combine-as-imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
