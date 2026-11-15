@@ -1,5 +1,6 @@
 """The config flow on Home Assistant OS: the Brain Call app announces itself, or is used, started or installed."""
 
+import asyncio
 from typing import Any
 
 from aiohasupervisor import SupervisorError
@@ -31,8 +32,12 @@ def discovery(**config: Any) -> HassioServiceInfo:
 class FakeApp:
     """Stands in for AddonManager: an app with a state, options, and the discovery message it sends when running."""
 
-    def __init__(self, state: AddonState = AddonState.NOT_INSTALLED, options: dict | None = None) -> None:
+    def __init__(
+        self, state: AddonState = AddonState.NOT_INSTALLED, options: dict | None = None, version: str = "1.13.0"
+    ) -> None:
         self.state = state
+        self.version = version
+        self.slow = False
         self.options = options or {}
         self.announces: dict | None = ANNOUNCED
         self.calls: list[Any] = []
@@ -45,7 +50,7 @@ class FakeApp:
             options=self.options,
             state=self.state,
             update_available=False,
-            version="1.13.0",
+            version=None if self.state is AddonState.NOT_INSTALLED else self.version,
         )
 
     async def async_install_addon(self) -> None:
@@ -66,6 +71,8 @@ class FakeApp:
         self.state = AddonState.RUNNING
 
     async def async_get_addon_discovery_info(self) -> dict:
+        if self.slow:  # a Supervisor that takes far longer than the whole wait
+            await asyncio.sleep(3600)
         if self.state is not AddonState.RUNNING or self.announces is None:
             raise AddonError("no discovery")
         return self.announces
@@ -95,7 +102,7 @@ def supervisor(monkeypatch) -> dict[str, Any]:
     monkeypatch.setattr(config_flow, "async_add_repository", add)
     monkeypatch.setattr(config_flow, "get_app_manager", manager)
     monkeypatch.setattr(config_flow, "START_POLL_S", 0)
-    monkeypatch.setattr(config_flow, "START_POLL_ROUNDS", 3)
+    monkeypatch.setattr(config_flow, "START_TIMEOUT_S", 0.2)
     return state
 
 
@@ -189,6 +196,26 @@ async def test_an_app_too_old_to_announce_itself_leads_to_the_form(hass: HomeAss
     supervisor["app"].announces = None
     result = await choose_app(hass)
     assert result["type"] is FlowResultType.FORM and result["step_id"] == "manual"
+
+
+async def test_a_stopped_app_too_old_to_announce_itself_is_started_and_leads_to_the_form(
+    hass: HomeAssistant, brain_call, supervisor
+) -> None:
+    supervisor["slug"] = "98055a04_braincall"
+    supervisor["app"] = FakeApp(AddonState.NOT_RUNNING, {"anthropic_api_key": KEY}, version="1.12.0")
+    supervisor["app"].announces = None
+    result = await run_progress(hass, await choose_app(hass))
+    assert result["type"] is FlowResultType.FORM and result["step_id"] == "manual"
+    assert supervisor["app"].calls == ["start"]
+
+
+async def test_the_wait_after_the_start_includes_slow_requests(hass: HomeAssistant, brain_call, supervisor) -> None:
+    """The time limit holds for the whole wait, not only for the pauses between the looks."""
+    supervisor["slug"] = "98055a04_braincall"
+    supervisor["app"] = FakeApp(AddonState.NOT_RUNNING, {"anthropic_api_key": KEY})
+    supervisor["app"].slow = True
+    result = await run_progress(hass, await choose_app(hass))
+    assert result["type"] is FlowResultType.ABORT and result["reason"] == "app_start_failed"
 
 
 async def test_a_stopped_app_is_started(hass: HomeAssistant, brain_call, supervisor) -> None:
