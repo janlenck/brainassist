@@ -1,7 +1,16 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
+        "title": "Підключення до Brain Call",
+        "description": "Brain Assist передає запити асистента Home Assistant до Brain Call. Де працює Brain Call?",
+        "menu_options": {
+          "app": "Як застосунок на цій системі (знайти, запустити або встановити)",
+          "manual": "На іншому комп'ютері, або ввести адресу й токен самостійно"
+        }
+      },
+      "manual": {
         "title": "Підключення до Brain Call",
         "description": "Brain Assist передає запити асистента Home Assistant до Brain Call (версія 1.11.0 або новіша). API-токен міститься у файлі api-token.txt у теці застосунку Brain Call, або це токен, який ви там задали як API-токен.",
         "data": {
@@ -11,6 +20,46 @@
         "data_description": {
           "url": "Якщо Brain Call працює як застосунок на цій системі: http://127.0.0.1:8099",
           "token": "Без нього Brain Call не відповідає на жоден запит, навіть із цієї системи."
+        }
+      },
+      "hassio_confirm": {
+        "title": "Brain Call знайдено",
+        "description": "Застосунок {name} працює на цій системі й повідомив Home Assistant свою адресу та токен. Підключити до нього Brain Assist?"
+      },
+      "add_repository_confirm": {
+        "title": "Встановити застосунок Brain Call",
+        "description": "Brain Call ще немає в магазині застосунків цієї системи. З вашої згоди Brain Assist додасть репозиторій {repository} до магазину застосунків, встановить застосунок Brain Call, передасть йому налаштування нижче й запустить його. Без телефонного облікового запису він відповідає лише Assist. Телефон, пам'ять і все інше: конфігурація застосунку.",
+        "data": {
+          "anthropic_api_key": "API-ключ Claude",
+          "admin": "Адміністратор у Brain Call"
+        },
+        "data_description": {
+          "anthropic_api_key": "З console.anthropic.com. Без нього Brain Call не запуститься.",
+          "admin": "Цей користувач Home Assistant може в Assist усе. Інші люди й пристрої: Callers у конфігурації застосунку."
+        }
+      },
+      "install_app_confirm": {
+        "title": "Встановити застосунок Brain Call",
+        "description": "З вашої згоди Brain Assist встановить застосунок Brain Call з {repository}, передасть йому налаштування нижче й запустить його. Без телефонного облікового запису він відповідає лише Assist. Телефон, пам'ять і все інше: конфігурація застосунку.",
+        "data": {
+          "anthropic_api_key": "API-ключ Claude",
+          "admin": "Адміністратор у Brain Call"
+        },
+        "data_description": {
+          "anthropic_api_key": "З console.anthropic.com. Без нього Brain Call не запуститься.",
+          "admin": "Цей користувач Home Assistant може в Assist усе. Інші люди й пристрої: Callers у конфігурації застосунку."
+        }
+      },
+      "app_settings": {
+        "title": "Налаштування застосунку Brain Call",
+        "description": "Застосунок Brain Call встановлено, але він не має API-ключа Claude і тому не може запуститися. Brain Assist внесе налаштування нижче до конфігурації застосунку й запустить його.",
+        "data": {
+          "anthropic_api_key": "API-ключ Claude",
+          "admin": "Адміністратор у Brain Call"
+        },
+        "data_description": {
+          "anthropic_api_key": "З console.anthropic.com. Без нього Brain Call не запуститься.",
+          "admin": "Цей користувач Home Assistant може в Assist усе. Інші люди й пристрої: Callers у конфігурації застосунку."
         }
       },
       "reconfigure": {
@@ -32,6 +81,10 @@
         }
       }
     },
+    "progress": {
+      "install_app": "Встановлюється застосунок Brain Call. Це може тривати кілька хвилин.",
+      "start_app": "Застосунок Brain Call запускається, Brain Assist чекає на відповідь."
+    },
     "error": {
       "cannot_connect": "Brain Call недоступний за цією адресою. Чи запущено застосунок і чи правильна адреса?",
       "invalid_auth": "Brain Call відхилив токен.",
@@ -42,7 +95,17 @@
     "abort": {
       "already_configured": "Цей Brain Call уже налаштовано.",
       "reauth_successful": "Новий токен працює.",
-      "reconfigure_successful": "Підключення змінено."
+      "reconfigure_successful": "Підключення змінено.",
+      "cannot_connect": "Застосунок Brain Call недоступний. Причину видно в його журналі.",
+      "invalid_auth": "Brain Call відхилив токен, який повідомив застосунок. Перезапустіть застосунок.",
+      "too_old": "Цей Brain Call застарий для Brain Assist. Оновіть застосунок Brain Call.",
+      "too_new": "Цей Brain Call новіший, ніж розуміє Brain Assist. Оновіть Brain Assist.",
+      "unknown": "Застосунок відповів не так, як Brain Call. Подробиці в журналі.",
+      "invalid_discovery_info": "Застосунок Brain Call повідомив про себе без адреси або токена.",
+      "app_info_failed": "Не вдається прочитати магазин застосунків цієї системи. Подробиці в журналі.",
+      "app_install_failed": "Не вдалося встановити застосунок Brain Call. Подробиці в журналі. Вручну: Налаштування → Застосунки → Магазин застосунків → ⋮ → Репозиторії: {repository}.",
+      "app_start_failed": "Застосунок Brain Call не запустився або не відповів вчасно. Причину видно в його журналі (Налаштування → Застосунки → Brain Call → Журнал).",
+      "app_busy": "Застосунок Brain Call саме встановлюється або оновлюється. Спробуйте ще раз, коли це завершиться."
     }
   },
   "entity": {
