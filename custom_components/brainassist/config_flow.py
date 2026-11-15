@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from aiohasupervisor import SupervisorError
+from awesomeversion import AwesomeVersion
 from homeassistant.components.hassio import AddonError, AddonInfo, AddonManager, AddonState
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_TOKEN, CONF_URL
@@ -50,9 +51,20 @@ TOKEN_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)
 CONF_CLAUDE_KEY = "anthropic_api_key"
 CONF_ADMIN = "admin"
 
-# After the start of the app: how long to wait for it to announce itself and answer
+# After the start of the app: how often to look whether it announced itself and answers, and for how long at most
+# (the requests in between included)
 START_POLL_S = 3
-START_POLL_ROUNDS = 40
+START_TIMEOUT_S = 120
+# Brain Call announces itself to Home Assistant since this version; an older app gets address and token typed
+ANNOUNCES_SINCE = AwesomeVersion("1.13.0")
+
+
+def _announces(version: str | None) -> bool:
+    """Whether an app of this version announces itself; an unknown version is taken to be new."""
+    if not version:
+        return True
+    parsed = AwesomeVersion(version)
+    return not parsed.valid or parsed >= ANNOUNCES_SINCE
 
 
 def _schema(url: str) -> vol.Schema:
@@ -89,6 +101,7 @@ class BrainAssistConfigFlow(ConfigFlow, domain=DOMAIN):
         self._info: ServerInfo | None = None
         self._errors: dict[str, str] = {}  # why the app that announced itself did not answer as expected
         self._app_name = APP_NAME
+        self._announces = True  # False for an installed app older than 1.13.0
 
     async def _check(self, url: str, token: str, errors: dict[str, str]) -> ServerInfo | None:
         """Ask the server for its version; fills errors and returns None if that fails."""
@@ -180,6 +193,7 @@ class BrainAssistConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_add_repository_confirm()
         self._slug = slug
         info = await self._app_info()
+        self._announces = _announces(info.version)
         if info.state is AddonState.RUNNING:
             return await self.async_step_finish_app()
         if info.state is AddonState.NOT_INSTALLED:
@@ -281,16 +295,25 @@ class BrainAssistConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="app_settings", data_schema=await self._settings_schema())
 
     async def _start(self) -> None:
-        """Start the app and wait until it announced itself and answers."""
+        """Start the app and wait until it announced itself and answers, at most START_TIMEOUT_S in all.
+
+        An app older than 1.13.0 never announces itself: it is only started, and the address form follows.
+        """
         manager = get_app_manager(self.hass, self._slug)
         await manager.async_start_addon()
-        last = "no answer"
-        for _ in range(START_POLL_ROUNDS):
-            await asyncio.sleep(START_POLL_S)
-            if await self._found_app(manager):
-                return
-            last = "not announced yet" if self._found is None else "announced, but does not answer yet"
-        raise AppNotReady(f"the app {last} after {START_POLL_S * START_POLL_ROUNDS} s")
+        if not self._announces:
+            return
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        try:
+            async with asyncio.timeout(START_TIMEOUT_S):
+                while True:  # the Supervisor and the app tell nothing by themselves: look again and again
+                    if await self._found_app(manager):
+                        return
+                    await asyncio.sleep(START_POLL_S)
+        except TimeoutError:
+            last = "did not announce itself" if self._found is None else "announced itself but did not answer"
+            raise AppNotReady(f"the app {last} within {loop.time() - started:.0f} s") from None
 
     async def _found_app(self, manager: AddonManager) -> bool:
         """True once the app announced address and token and answers with a version this integration speaks."""
@@ -335,7 +358,7 @@ class BrainAssistConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_finish_app(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Connect to the running app with what it announced; an app too old to announce itself: by hand."""
         manager = get_app_manager(self.hass, self._slug)
-        if self._info is None and not await self._found_app(manager):
+        if self._info is None and not (self._announces and await self._found_app(manager)):
             if self._found is None:  # Brain Call before 1.13.0 does not announce itself
                 return await self.async_step_manual()
             return self.async_abort(reason=self._errors.get("base", "cannot_connect"))
