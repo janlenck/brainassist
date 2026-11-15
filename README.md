@@ -85,6 +85,11 @@ Brain Assist tells Brain Call who asks (user id and name) and from where (device
   simple commands like "turn on the light" itself and Brain Call never sees them. That is faster, but Brain
   Call's access rules do not apply to those commands.
 - **Questions back:** when the answer ends with a question, a voice device keeps listening.
+- **Memory:** with *Memory per person* on in Brain Call (1.12.0 or newer, off by default), phone and Assist
+  share what is remembered of a person: an entry in *Callers* with number and `ha_user` has one memory. A
+  conversation is summarized when it is over (15 minutes after the last request, or when the same user starts
+  a new one on the same device), which costs one more short request to Claude. A voice device without a user
+  has its own memory.
 - **Tools** Brain Call used show up in the debug view of the assistant (Settings → Voice assistants → ⋮ → Debug).
 - **Timers, media control by area and announcements** of Home Assistant's own assistant are not part of Brain
   Call. With local handling off they stop working for an assistant that uses Brain Assist.
@@ -104,8 +109,8 @@ Brain Assist tells Brain Call who asks (user id and name) and from where (device
 
 ## Not yet
 
-Finding and installing the Brain Call app from the config flow, memory shared between phone and Assist, limits
-per person, planned calls from Home Assistant (`brainassist.call`, a to-do list of tasks). See
+Finding and installing the Brain Call app from the config flow, limits per person, planned calls from Home
+Assistant (`brainassist.call`, a to-do list of tasks). See
 [braincall#50](https://github.com/janlenck/braincall/issues/50).
 
 ## Development
