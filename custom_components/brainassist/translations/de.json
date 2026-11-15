@@ -1,7 +1,16 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
+        "title": "Mit Brain Call verbinden",
+        "description": "Brain Assist reicht die Anfragen des Assistenten von Home Assistant an Brain Call weiter. Wo läuft Brain Call?",
+        "menu_options": {
+          "app": "Als App auf diesem System (finden, starten oder installieren)",
+          "manual": "Auf einem anderen Rechner, oder Adresse und Token selbst eingeben"
+        }
+      },
+      "manual": {
         "title": "Mit Brain Call verbinden",
         "description": "Brain Assist reicht die Anfragen des Assistenten von Home Assistant an Brain Call weiter (Version 1.11.0 oder neuer). Der API-Token steht in der Datei api-token.txt im Ordner der Brain-Call-App, oder es ist der Token, den du dort als API-Token gesetzt hast.",
         "data": {
@@ -11,6 +20,46 @@
         "data_description": {
           "url": "Mit Brain Call als App auf diesem System: http://127.0.0.1:8099",
           "token": "Ohne ihn beantwortet Brain Call keine Anfrage, auch nicht von diesem System."
+        }
+      },
+      "hassio_confirm": {
+        "title": "Brain Call gefunden",
+        "description": "Die App {name} läuft auf diesem System und hat Home Assistant ihre Adresse und ihren Token mitgeteilt. Brain Assist damit verbinden?"
+      },
+      "add_repository_confirm": {
+        "title": "Brain-Call-App installieren",
+        "description": "Brain Call ist noch nicht im App-Store dieses Systems. Mit deiner Zustimmung fügt Brain Assist das Repository {repository} zum App-Store hinzu, installiert die Brain-Call-App, gibt ihr die Einstellungen unten und startet sie. Ohne Telefonkonto beantwortet sie nur Assist. Telefon, Gedächtnis und alles andere: Konfiguration der App.",
+        "data": {
+          "anthropic_api_key": "Claude-API-Key",
+          "admin": "Administrator in Brain Call"
+        },
+        "data_description": {
+          "anthropic_api_key": "Von console.anthropic.com. Ohne ihn startet Brain Call nicht.",
+          "admin": "Dieser Benutzer von Home Assistant darf in Assist alles. Weitere Personen und Geräte: Anrufer in der Konfiguration der App."
+        }
+      },
+      "install_app_confirm": {
+        "title": "Brain-Call-App installieren",
+        "description": "Mit deiner Zustimmung installiert Brain Assist die Brain-Call-App aus {repository}, gibt ihr die Einstellungen unten und startet sie. Ohne Telefonkonto beantwortet sie nur Assist. Telefon, Gedächtnis und alles andere: Konfiguration der App.",
+        "data": {
+          "anthropic_api_key": "Claude-API-Key",
+          "admin": "Administrator in Brain Call"
+        },
+        "data_description": {
+          "anthropic_api_key": "Von console.anthropic.com. Ohne ihn startet Brain Call nicht.",
+          "admin": "Dieser Benutzer von Home Assistant darf in Assist alles. Weitere Personen und Geräte: Anrufer in der Konfiguration der App."
+        }
+      },
+      "app_settings": {
+        "title": "Einstellungen für die Brain-Call-App",
+        "description": "Die Brain-Call-App ist installiert, hat aber keinen Claude-API-Key und kann so nicht starten. Brain Assist trägt die Einstellungen unten in die Konfiguration der App ein und startet sie.",
+        "data": {
+          "anthropic_api_key": "Claude-API-Key",
+          "admin": "Administrator in Brain Call"
+        },
+        "data_description": {
+          "anthropic_api_key": "Von console.anthropic.com. Ohne ihn startet Brain Call nicht.",
+          "admin": "Dieser Benutzer von Home Assistant darf in Assist alles. Weitere Personen und Geräte: Anrufer in der Konfiguration der App."
         }
       },
       "reconfigure": {
@@ -32,6 +81,10 @@
         }
       }
     },
+    "progress": {
+      "install_app": "Die Brain-Call-App wird installiert. Das kann ein paar Minuten dauern.",
+      "start_app": "Die Brain-Call-App wird gestartet, Brain Assist wartet auf ihre Antwort."
+    },
     "error": {
       "cannot_connect": "Brain Call ist unter dieser Adresse nicht erreichbar. Läuft die App, und stimmt die Adresse?",
       "invalid_auth": "Brain Call hat den Token abgelehnt.",
@@ -42,7 +95,17 @@
     "abort": {
       "already_configured": "Dieses Brain Call ist bereits eingerichtet.",
       "reauth_successful": "Der neue Token funktioniert.",
-      "reconfigure_successful": "Die Verbindung wurde geändert."
+      "reconfigure_successful": "Die Verbindung wurde geändert.",
+      "cannot_connect": "Die Brain-Call-App ist nicht erreichbar. Ihr Log sagt, warum.",
+      "invalid_auth": "Brain Call hat den Token abgelehnt, den die App gemeldet hat. Starte die App neu.",
+      "too_old": "Dieses Brain Call ist zu alt für Brain Assist. Aktualisiere die Brain-Call-App.",
+      "too_new": "Dieses Brain Call ist neuer, als Brain Assist versteht. Aktualisiere Brain Assist.",
+      "unknown": "Die App hat nicht wie Brain Call geantwortet. Details stehen im Log.",
+      "invalid_discovery_info": "Die Brain-Call-App hat sich ohne Adresse oder Token gemeldet.",
+      "app_info_failed": "Der App-Store dieses Systems lässt sich nicht lesen. Details stehen im Log.",
+      "app_install_failed": "Die Installation der Brain-Call-App ist fehlgeschlagen. Details stehen im Log. Von Hand: Einstellungen → Apps → App-Store → ⋮ → Repositories: {repository}.",
+      "app_start_failed": "Die Brain-Call-App ist nicht gestartet oder hat nicht rechtzeitig geantwortet. Ihr Log (Einstellungen → Apps → Brain Call → Log) sagt, warum.",
+      "app_busy": "Die Brain-Call-App wird gerade installiert oder aktualisiert. Versuch es noch einmal, wenn das fertig ist."
     }
   },
   "entity": {

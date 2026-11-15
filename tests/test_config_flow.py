@@ -21,7 +21,7 @@ from .conftest import INFO, TOKEN, URL
 
 async def start(hass: HomeAssistant):
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
-    assert result["type"] is FlowResultType.FORM and result["step_id"] == "user" and not result["errors"]
+    assert result["type"] is FlowResultType.FORM and result["step_id"] == "manual" and not result["errors"]
     return result
 
 
