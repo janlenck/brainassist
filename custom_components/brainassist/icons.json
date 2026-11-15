@@ -1,0 +1,14 @@
+{
+  "entity": {
+    "todo": {
+      "tasks": {
+        "default": "mdi:phone-clock"
+      }
+    }
+  },
+  "services": {
+    "call": {
+      "service": "mdi:phone-outgoing"
+    }
+  }
+}

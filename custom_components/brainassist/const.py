@@ -17,3 +17,9 @@ CHANNEL_TEXT = "text"
 CHANNELS = (CHANNEL_VOICE, CHANNEL_TEXT)
 
 ISSUE_INCOMPATIBLE = "incompatible_api"
+
+# Planned calls (Brain Call 1.14.0): fired by Brain Call into Home Assistant on every status change and at the end
+EVENT_TASK_UPDATED = "braincall_task_updated"
+EVENT_TASK_FINISHED = "braincall_task_finished"
+OPEN_STATUSES = ("planned", "running")
+SERVICE_CALL = "call"

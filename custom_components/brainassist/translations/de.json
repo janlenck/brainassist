@@ -116,6 +116,11 @@
       "text": {
         "name": "Text"
       }
+    },
+    "todo": {
+      "tasks": {
+        "name": "Geplante Anrufe"
+      }
     }
   },
   "issues": {
@@ -126,6 +131,87 @@
     "brain_assist_too_old": {
       "title": "Brain Assist ist zu alt für Brain Call",
       "description": "Brain Call {version} spricht Version {server_api} seiner API, Brain Assist versteht nur Version {client_api}. Aktualisiere Brain Assist im Marketplace und starte Home Assistant neu."
+    }
+  },
+  "services": {
+    "call": {
+      "name": "Anruf planen",
+      "description": "Brain Call ruft eine Nummer oder eine Person aus den Anrufern mit einer Aufgabe an, führt das Gespräch und meldet das Ergebnis (Ereignis braincall_task_finished, die To-do-Liste, eine Benachrichtigung und auf Wunsch ein Rückruf). Braucht eingeschaltete geplante Anrufe in Brain Call 1.14.0 oder neuer.",
+      "fields": {
+        "number": {
+          "name": "Nummer",
+          "description": "Die anzurufende Telefonnummer. Leer lassen, um eine Person aus den Anrufern beim Namen anzurufen."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Person oder Firma, die angerufen wird; allein der Name einer Person aus den Anrufern, deren Nummer dann genommen wird."
+        },
+        "task": {
+          "name": "Aufgabe",
+          "description": "Worum es beim Anruf geht, in eigenen Worten. Brain Call macht daraus den Plan."
+        },
+        "not_before": {
+          "name": "Nicht vor",
+          "description": "Frühester Zeitpunkt für den Anruf. Standard: jetzt."
+        },
+        "not_after": {
+          "name": "Nicht nach",
+          "description": "Danach wird aufgegeben. Standard: 24 Stunden später."
+        },
+        "retries": {
+          "name": "Wiederholungen",
+          "description": "Weitere Versuche, wenn niemand erreicht wird. Standard: 2."
+        },
+        "language": {
+          "name": "Sprache",
+          "description": "Sprache des Anrufs. Standard: wie in Brain Call eingestellt."
+        },
+        "call_back": {
+          "name": "Zurückrufen",
+          "description": "Den Auftraggeber mit dem Ergebnis zurückrufen; braucht eine Nummer in seinem Eintrag bei den Anrufern."
+        },
+        "leave_message": {
+          "name": "Nachricht hinterlassen",
+          "description": "Auf einer Mailbox eine kurze Nachricht hinterlassen; damit endet die Aufgabe. Standard: an."
+        },
+        "config_entry_id": {
+          "name": "Brain Call",
+          "description": "Nur bei mehr als einem Brain-Call-Server."
+        }
+      }
+    }
+  },
+  "selector": {
+    "language": {
+      "options": {
+        "de": "Deutsch",
+        "en": "Englisch",
+        "uk": "Ukrainisch",
+        "auto": "Sprache des Angerufenen"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "Brain Assist ist nicht mit Brain Call verbunden."
+    },
+    "tasks_off": {
+      "message": "Geplante Anrufe sind in Brain Call ausgeschaltet (Geplante Anrufe), oder Brain Call ist älter als 1.14.0."
+    },
+    "call_refused": {
+      "message": "Brain Call hat den Anruf nicht geplant: {reason}"
+    },
+    "cannot_connect": {
+      "message": "Brain Call ist nicht erreichbar: {error}"
+    },
+    "task_running": {
+      "message": "Dieser Anruf läuft gerade und kann nicht abgebrochen werden."
+    },
+    "task_finished": {
+      "message": "Dieser Anruf ist vorbei. Brain Call entfernt beendete Anrufe nach 30 Tagen."
+    },
+    "cancel_refused": {
+      "message": "Brain Call hat den Anruf nicht abgebrochen: {reason}"
     }
   }
 }

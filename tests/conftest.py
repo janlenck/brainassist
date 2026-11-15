@@ -33,6 +33,11 @@ class FakeBrainCall:
     events: list[dict[str, Any] | Exception] = []
     requests: list[dict[str, Any]] = []
     created: list[tuple[str, str]] = []
+    tasks: list[dict[str, Any]] | Exception = []  # what GET /api/tasks answers
+    planned: list[dict[str, Any]] = []  # bodies of POST /api/tasks
+    plan_error: Exception | None = None
+    cancelled: list[str] = []
+    cancel_error: Exception | None = None
 
     def __init__(self, session, url: str, token: str) -> None:
         self.url = url
@@ -42,6 +47,28 @@ class FakeBrainCall:
         if isinstance(FakeBrainCall.info, Exception):
             raise FakeBrainCall.info
         return FakeBrainCall.info
+
+    async def async_tasks(self) -> list[dict[str, Any]]:
+        if isinstance(FakeBrainCall.tasks, Exception):
+            raise FakeBrainCall.tasks
+        return [dict(t) for t in FakeBrainCall.tasks]
+
+    async def async_plan_task(self, body: dict[str, Any]) -> dict[str, Any]:
+        FakeBrainCall.planned.append(body)
+        if FakeBrainCall.plan_error is not None:
+            raise FakeBrainCall.plan_error
+        task = {"id": f"t{len(FakeBrainCall.planned)}", "status": "planned", "goal": body["task"], **body}
+        if isinstance(FakeBrainCall.tasks, list):
+            FakeBrainCall.tasks.append(task)
+        return task
+
+    async def async_cancel_task(self, task_id: str) -> None:
+        if FakeBrainCall.cancel_error is not None:
+            raise FakeBrainCall.cancel_error
+        FakeBrainCall.cancelled.append(task_id)
+        for task in FakeBrainCall.tasks if isinstance(FakeBrainCall.tasks, list) else []:
+            if task["id"] == task_id:
+                task["status"] = "cancelled"
 
     async def async_converse(self, payload: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         FakeBrainCall.requests.append(payload)
@@ -58,6 +85,11 @@ def brain_call(monkeypatch) -> type[FakeBrainCall]:
     FakeBrainCall.events = []
     FakeBrainCall.requests = []
     FakeBrainCall.created = []
+    FakeBrainCall.tasks = []
+    FakeBrainCall.planned = []
+    FakeBrainCall.plan_error = None
+    FakeBrainCall.cancelled = []
+    FakeBrainCall.cancel_error = None
     monkeypatch.setattr("custom_components.brainassist.BrainCallClient", FakeBrainCall)
     monkeypatch.setattr("custom_components.brainassist.config_flow.BrainCallClient", FakeBrainCall)
     return FakeBrainCall

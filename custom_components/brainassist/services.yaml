@@ -1,0 +1,48 @@
+call:
+  fields:
+    number:
+      example: "04542 1234"
+      selector:
+        text:
+          type: tel
+    name:
+      example: "Mark"
+      selector:
+        text:
+    task:
+      required: true
+      example: "Frag Mark, ob er Freitag um 18 Uhr Zeit hat, und trag es in den Kalender ein."
+      selector:
+        text:
+          multiline: true
+    not_before:
+      selector:
+        datetime:
+    not_after:
+      selector:
+        datetime:
+    retries:
+      selector:
+        number:
+          min: 0
+          max: 10
+          mode: box
+    language:
+      selector:
+        select:
+          options:
+            - de
+            - en
+            - uk
+            - auto
+          translation_key: language
+    call_back:
+      selector:
+        boolean:
+    leave_message:
+      selector:
+        boolean:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: brainassist

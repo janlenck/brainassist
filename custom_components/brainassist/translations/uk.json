@@ -116,6 +116,11 @@
       "text": {
         "name": "Текст"
       }
+    },
+    "todo": {
+      "tasks": {
+        "name": "Заплановані дзвінки"
+      }
     }
   },
   "issues": {
@@ -126,6 +131,87 @@
     "brain_assist_too_old": {
       "title": "Brain Assist застарий для Brain Call",
       "description": "Brain Call {version} використовує версію {server_api} свого API, а Brain Assist розуміє лише версію {client_api}. Оновіть Brain Assist у Marketplace і перезапустіть Home Assistant."
+    }
+  },
+  "services": {
+    "call": {
+      "name": "Запланувати дзвінок",
+      "description": "Brain Call телефонує на номер або особі з Callers із завданням, веде розмову й повідомляє результат (подія braincall_task_finished, список справ, сповіщення і, за бажанням, зворотний дзвінок). Потрібні увімкнені заплановані дзвінки в Brain Call 1.14.0 або новішому.",
+      "fields": {
+        "number": {
+          "name": "Номер",
+          "description": "Номер, на який телефонувати. Залиште порожнім, щоб зателефонувати особі з Callers за іменем."
+        },
+        "name": {
+          "name": "Ім'я",
+          "description": "Особа чи компанія, якій телефонувати; саме лише ім'я особи з Callers, чий номер тоді використовується."
+        },
+        "task": {
+          "name": "Завдання",
+          "description": "Про що дзвінок, своїми словами. Brain Call складе з цього план."
+        },
+        "not_before": {
+          "name": "Не раніше",
+          "description": "Найраніший час дзвінка. Типово: зараз."
+        },
+        "not_after": {
+          "name": "Не пізніше",
+          "description": "Після цього часу спроби припиняються. Типово: через 24 години."
+        },
+        "retries": {
+          "name": "Повтори",
+          "description": "Додаткові спроби, якщо ніхто не відповів. Типово: 2."
+        },
+        "language": {
+          "name": "Мова",
+          "description": "Мова дзвінка. Типово: як налаштовано в Brain Call."
+        },
+        "call_back": {
+          "name": "Передзвонити",
+          "description": "Передзвонити замовнику з результатом; потрібен номер у його записі в Callers."
+        },
+        "leave_message": {
+          "name": "Залишити повідомлення",
+          "description": "Залишити коротке повідомлення на автовідповідачі; це завершує завдання. Типово: увімкнено."
+        },
+        "config_entry_id": {
+          "name": "Brain Call",
+          "description": "Лише якщо серверів Brain Call більше одного."
+        }
+      }
+    }
+  },
+  "selector": {
+    "language": {
+      "options": {
+        "de": "Німецька",
+        "en": "Англійська",
+        "uk": "Українська",
+        "auto": "Мова співрозмовника"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "Brain Assist не підключено до Brain Call."
+    },
+    "tasks_off": {
+      "message": "Заплановані дзвінки в Brain Call вимкнено (Planned calls), або Brain Call старший за 1.14.0."
+    },
+    "call_refused": {
+      "message": "Brain Call не запланував дзвінок: {reason}"
+    },
+    "cannot_connect": {
+      "message": "Brain Call недоступний: {error}"
+    },
+    "task_running": {
+      "message": "Цей дзвінок триває саме зараз, його не можна скасувати."
+    },
+    "task_finished": {
+      "message": "Цей дзвінок завершено. Brain Call видаляє завершені дзвінки через 30 днів."
+    },
+    "cancel_refused": {
+      "message": "Brain Call не скасував дзвінок: {reason}"
     }
   }
 }
