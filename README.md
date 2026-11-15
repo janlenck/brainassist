@@ -172,7 +172,9 @@ Restaurant an und reservier einen Tisch für vier"). With *Planned calls* on in 
   listening for it.
 - **Action `brainassist.call`**, for automations, scripts and by hand: `number`, or `name` alone for a person
   from *Callers* (their number is taken from there), and `task`. Optional: `not_before`, `not_after`, `retries`,
-  `language`, `call_back`, `leave_message`. The answer is the planned task with its `id`.
+  `language`, `call_back`, `leave_message`. The answer is the planned task with its `id`. Only administrators of
+  Home Assistant may run it, and automations and scripts. With more than one Brain Call server, `config_entry_id`
+  says which one.
 
   ```yaml
   action: brainassist.call

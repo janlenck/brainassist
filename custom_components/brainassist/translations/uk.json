@@ -176,7 +176,7 @@
         },
         "config_entry_id": {
           "name": "Brain Call",
-          "description": "Лише якщо серверів Brain Call більше одного."
+          "description": "Лише якщо серверів Brain Call більше одного; тоді це обов'язково."
         }
       }
     }
@@ -212,6 +212,9 @@
     },
     "cancel_refused": {
       "message": "Brain Call не скасував дзвінок: {reason}"
+    },
+    "which_server": {
+      "message": "Є більше одного Brain Call із запланованими дзвінками: виберіть один (Brain Call)."
     }
   }
 }

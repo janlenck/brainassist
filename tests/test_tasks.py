@@ -4,7 +4,7 @@ from dataclasses import replace
 
 from homeassistant.components.todo import DOMAIN as TODO_DOMAIN
 from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUser
 import voluptuous as vol
@@ -140,7 +140,7 @@ async def test_a_list_that_cannot_be_read_leaves_the_agents_working(
 
 async def test_call_plans_a_task_for_the_user_who_runs_it(hass: HomeAssistant, with_tasks, brain_call) -> None:
     await hass.config.async_set_time_zone("Europe/Berlin")
-    user = MockUser(name="Jan").add_to_hass(hass)
+    user = MockUser(name="Jan", is_owner=True).add_to_hass(hass)  # the owner is an administrator
     response = await hass.services.async_call(
         DOMAIN,
         "call",
@@ -160,7 +160,7 @@ async def test_call_plans_a_task_for_the_user_who_runs_it(hass: HomeAssistant, w
         {
             "task": "Frag Mark nach Freitag",
             "name": "Mark",
-            "not_before": "2026-11-16T18:00",
+            "not_before": "2026-11-16T18:00+01:00",
             "retries": 1,
             "language": "de",
             "call_back": True,
@@ -171,6 +171,57 @@ async def test_call_plans_a_task_for_the_user_who_runs_it(hass: HomeAssistant, w
     assert response["id"] == "t1" and response["status"] == "planned"
     await hass.async_block_till_done()
     assert "t1" in [i["uid"] for i in await items(hass)]
+
+
+async def test_call_is_only_for_administrators(hass: HomeAssistant, with_tasks, brain_call) -> None:
+    """Brain Call trusts the token: Home Assistant draws the line. Automations (no user) may."""
+    user = MockUser(name="Gast").add_to_hass(hass)
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call(
+            DOMAIN, "call", {"number": "0401", "task": "x"}, blocking=True, context=Context(user_id=user.id)
+        )
+    assert brain_call.planned == []
+
+
+async def test_times_keep_their_utc_offset(hass: HomeAssistant, with_tasks, brain_call) -> None:
+    """The hour that repeats at the end of daylight saving time, and a Brain Call in another time zone."""
+    await hass.config.async_set_time_zone("Europe/Berlin")
+    await hass.services.async_call(
+        DOMAIN,
+        "call",
+        {"number": "0401", "task": "x", "not_before": "2026-10-25T00:30:00+00:00", "not_after": "2026-10-25 12:00:00"},
+        blocking=True,
+    )
+    assert brain_call.planned[0]["not_before"] == "2026-10-25T02:30+02:00"  # the first 02:30, summer time
+    assert brain_call.planned[0]["not_after"] == "2026-10-25T12:00+01:00"  # local time without offset: winter time
+
+
+async def test_with_two_servers_one_must_be_named(hass: HomeAssistant, with_tasks, brain_call) -> None:
+    other = MockConfigEntry(
+        domain=DOMAIN, unique_id="http://other:8099", data={"url": "http://other:8099", "token": "t"}
+    )
+    other.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(other.entry_id)
+    await hass.async_block_till_done()
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call(DOMAIN, "call", {"name": "Mark", "task": "x"}, blocking=True)
+    assert err.value.translation_key == "which_server" and brain_call.planned == []
+    await hass.services.async_call(
+        DOMAIN, "call", {"name": "Mark", "task": "x", "config_entry_id": other.entry_id}, blocking=True
+    )
+    assert len(brain_call.planned) == 1
+
+
+async def test_open_calls_are_ordered_by_the_instant(hass: HomeAssistant, entry: MockConfigEntry, brain_call) -> None:
+    brain_call.info = replace(INFO, tasks=True)
+    brain_call.tasks = [
+        {"id": "late", "status": "planned", "goal": "x", "number": "1", "next_try": "2026-11-16T18:00+00:00"},
+        {"id": "early", "status": "planned", "goal": "x", "number": "2", "next_try": "2026-11-16T19:00+02:00"},
+        {"id": "now", "status": "running", "goal": "x", "number": "3"},
+    ]
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert [i["uid"] for i in await items(hass)] == ["now", "early", "late"]
 
 
 async def test_call_from_an_automation_has_no_requester(hass: HomeAssistant, with_tasks, brain_call) -> None:

@@ -9,6 +9,9 @@ from urllib.parse import quote
 import aiohttp
 
 TIMEOUT = aiohttp.ClientTimeout(total=15)
+# Planning a call: without a plan Brain Call lets Claude make one before it answers. Giving up early would report a
+# failure for a task that is stored anyway, and trying again would plan it twice
+PLAN_TIMEOUT = aiohttp.ClientTimeout(total=120, sock_connect=10)
 # An answer may take long (tools, web lookups): no limit on the whole request, only on the gaps in the stream
 STREAM_TIMEOUT = aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=180)
 
@@ -104,11 +107,13 @@ class BrainCallClient:
             tasks=data.get("tasks") is True,
         )
 
-    async def _json(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any:
+    async def _json(
+        self, method: str, path: str, body: dict[str, Any] | None = None, limit: aiohttp.ClientTimeout = TIMEOUT
+    ) -> Any:
         """One request to the API; the answer as JSON. Errors name what Brain Call said ("error")."""
         try:
             async with self._session.request(
-                method, f"{self.url}{path}", headers=self._headers, json=body, timeout=TIMEOUT
+                method, f"{self.url}{path}", headers=self._headers, json=body, timeout=limit
             ) as resp:
                 await self._raise_for_status(resp, ok=(200, 201))
                 return await resp.json(content_type=None)
@@ -127,7 +132,7 @@ class BrainCallClient:
 
     async def async_plan_task(self, body: dict[str, Any]) -> dict[str, Any]:
         """Plan a call (POST /api/tasks); the stored task. A refusal is a BrainCallError with Brain Call's reason."""
-        task = await self._json("POST", "/api/tasks", body)
+        task = await self._json("POST", "/api/tasks", body, limit=PLAN_TIMEOUT)
         if not isinstance(task, dict) or not task.get("id"):
             raise BrainCallError("Brain Call did not answer with a task")
         return task

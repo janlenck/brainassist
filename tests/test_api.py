@@ -127,6 +127,24 @@ async def test_plan_task(hass: HomeAssistant, aioclient_mock: AiohttpClientMocke
     assert aioclient_mock.mock_calls[0][2] == body
 
 
+async def test_planning_may_take_as_long_as_claude_needs(hass: HomeAssistant, monkeypatch) -> None:
+    """Without a plan Brain Call asks Claude before it answers: 15 s would report a stored task as failed."""
+    from custom_components.brainassist import api
+
+    used = {}
+
+    async def fake_json(method, path, body=None, limit=api.TIMEOUT):
+        used[method] = limit
+        return {"id": "x"} if method == "POST" else {"tasks": []}
+
+    c = client(hass)
+    monkeypatch.setattr(c, "_json", fake_json)
+    await c.async_plan_task({"number": "0401", "task": "x"})
+    await c.async_tasks()
+    assert used["POST"] is api.PLAN_TIMEOUT and used["POST"].total >= 60
+    assert used["GET"] is api.TIMEOUT
+
+
 async def test_plan_task_refused_with_the_reason(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
     aioclient_mock.post(f"{URL}/api/tasks", status=400, json={"error": "numbers starting with 112 are blocked"})
     with pytest.raises(BrainCallRefusedError) as err:

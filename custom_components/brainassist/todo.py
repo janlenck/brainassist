@@ -66,11 +66,13 @@ def item(task: dict[str, Any]) -> TodoItem:
 
 
 def _order(task: dict[str, Any]) -> tuple:
-    """Open tasks first, the next one on top; then the finished ones, the latest on top."""
+    """Open tasks first, the next one on top (by the instant, whatever the UTC offset; without a time first);
+    then the finished ones, the latest on top."""
     if task.get("status") in OPEN_STATUSES:
-        return (0, str(task.get("next_try") or ""))
+        due = _time(task.get("next_try"))
+        return (0, due.timestamp() if due and due.tzinfo else float("-inf"))
     finished = _time(task.get("finished") or task.get("created"))
-    return (1, -(finished.timestamp() if finished else 0))
+    return (1, -(finished.timestamp() if finished and finished.tzinfo else 0))
 
 
 class BrainCallTasks(CoordinatorEntity[TasksCoordinator], TodoListEntity):
