@@ -2,6 +2,7 @@
   "domain": "brainassist",
   "name": "Brain Assist",
   "after_dependencies": ["assist_pipeline"],
+  "categories": ["ai_voice.voice_assistants"],
   "codeowners": ["@janlenck"],
   "config_flow": true,
   "dependencies": ["conversation"],
