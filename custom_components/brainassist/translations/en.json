@@ -116,6 +116,11 @@
       "text": {
         "name": "Text"
       }
+    },
+    "todo": {
+      "tasks": {
+        "name": "Planned calls"
+      }
     }
   },
   "issues": {
@@ -126,6 +131,90 @@
     "brain_assist_too_old": {
       "title": "Brain Assist is too old for Brain Call",
       "description": "Brain Call {version} speaks version {server_api} of its API, Brain Assist only understands version {client_api}. Update Brain Assist in the Marketplace and restart Home Assistant."
+    }
+  },
+  "services": {
+    "call": {
+      "name": "Plan a call",
+      "description": "Brain Call calls a number or a person from Callers with a task, holds the conversation and reports the result (event braincall_task_finished, the to-do list, a notification and, if wanted, a call back). Needs planned calls on in Brain Call 1.14.0 or newer.",
+      "fields": {
+        "number": {
+          "name": "Number",
+          "description": "Phone number to call. Leave it empty to call a person from Callers by name."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Person or business to call; alone, the name of a person in Callers whose number is used."
+        },
+        "task": {
+          "name": "Task",
+          "description": "What the call is for, in your own words. Brain Call makes the plan from it."
+        },
+        "not_before": {
+          "name": "Not before",
+          "description": "Earliest time to call. Default: now."
+        },
+        "not_after": {
+          "name": "Not after",
+          "description": "Give up after this time. Default: 24 hours later."
+        },
+        "retries": {
+          "name": "Retries",
+          "description": "Further attempts if nobody is reached. Default: 2."
+        },
+        "language": {
+          "name": "Language",
+          "description": "Language of the call. Default: as set in Brain Call."
+        },
+        "call_back": {
+          "name": "Call back",
+          "description": "Call the requester back with the result; needs a number in their Callers entry."
+        },
+        "leave_message": {
+          "name": "Leave a message",
+          "description": "Leave a short message on a mailbox; that ends the task. Default: on."
+        },
+        "config_entry_id": {
+          "name": "Brain Call",
+          "description": "Only with more than one Brain Call server; then it is needed."
+        }
+      }
+    }
+  },
+  "selector": {
+    "language": {
+      "options": {
+        "de": "German",
+        "en": "English",
+        "uk": "Ukrainian",
+        "auto": "Language of the callee"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "Brain Assist is not connected to Brain Call."
+    },
+    "tasks_off": {
+      "message": "Planned calls are off in Brain Call (Planned calls), or Brain Call is older than 1.14.0."
+    },
+    "call_refused": {
+      "message": "Brain Call did not plan the call: {reason}"
+    },
+    "cannot_connect": {
+      "message": "Brain Call cannot be reached: {error}"
+    },
+    "task_running": {
+      "message": "This call is running right now and cannot be cancelled."
+    },
+    "task_finished": {
+      "message": "This call is over. Brain Call removes finished calls after 30 days."
+    },
+    "cancel_refused": {
+      "message": "Brain Call did not cancel the call: {reason}"
+    },
+    "which_server": {
+      "message": "There is more than one Brain Call with planned calls: choose one (Brain Call)."
     }
   }
 }

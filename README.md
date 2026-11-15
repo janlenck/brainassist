@@ -30,6 +30,7 @@ access rules, the memory. Speech recognition and voice stay with Home Assistant.
   - 1.11.0 or newer for the agents
   - 1.12.0 for one memory per person on the phone and in Assist
   - 1.13.0 for discovery (no address or token to type) and for Assist without notifications
+  - 1.14.0 for [planned calls](#planned-calls) from Home Assistant
 
 ## Installation
 
@@ -161,6 +162,39 @@ one in Home Assistant. Phones and browsers usually have none; voice satellites a
 - Brain Call trusts what Brain Assist says about user and device. Whoever has the API token can act as any user:
   treat it like a Home Assistant access token. It is stored in the config entry and left out of diagnostics.
 
+## Planned calls
+
+Brain Call can make a call on its own with a task, hold the conversation and work through the result ("Ruf im
+Restaurant an und reservier einen Tisch für vier"). With *Planned calls* on in Brain Call 1.14.0 or newer:
+
+- **In Assist:** an administrator asks for it by voice or in the chat: "Ruf Mark morgen um 18 Uhr an und frag, ob
+  er Freitag Zeit hat". Brain Call reads the plan back and stores it only after a yes; a voice device keeps
+  listening for it.
+- **Action `brainassist.call`**, for automations, scripts and by hand: `number`, or `name` alone for a person
+  from *Callers* (their number is taken from there), and `task`. Optional: `not_before`, `not_after`, `retries`,
+  `language`, `call_back`, `leave_message`. The answer is the planned task with its `id`. Only administrators of
+  Home Assistant may run it, and automations and scripts. With more than one Brain Call server, `config_entry_id`
+  says which one.
+
+  ```yaml
+  action: brainassist.call
+  data:
+    name: Mark
+    task: Frag Mark, ob er Freitag um 18 Uhr Zeit hat, und trag es in den Kalender ein.
+    not_before: "2026-11-16 17:00:00"
+  response_variable: planned
+  ```
+
+- **Who asks:** the Home Assistant user who runs the action or speaks in Assist, as their entry in *Callers*. An
+  automation has no user: then it is the owner. The result is called back only if the requester's entry has a
+  phone number; otherwise it comes as notification and event.
+- **To-do list *Planned calls*** (`todo.brain_assist_planned_calls`): open calls first, with the time of the next
+  attempt, then the finished ones of the last 30 days with their result. Deleting an open item cancels the call; a
+  running or finished one cannot be taken back. It follows Brain Call's event `braincall_task_updated` and also
+  asks once a minute.
+- **The result** comes as event `braincall_task_finished` from Brain Call (`id`, `status`, `summary`, `answers`,
+  `steps`, `open_points`, …): use it as trigger in automations. Brain Assist adds no event of its own.
+
 ## Troubleshooting
 
 | What you see | Why |
@@ -174,11 +208,13 @@ one in Home Assistant. Phones and browsers usually have none; voice satellites a
 | Setup: the app did not start or did not answer | The log of the app (Settings → Apps → Brain Call → Log) says why; most often the Claude API key |
 | "As an app on this system" ends in the address form | The app is older than 1.13.0 and does not announce itself: update it, or enter address and token |
 | Repair "Brain Call is too old / Brain Assist is too old" | The two were updated apart and no longer speak the same API version. Update the one named; Brain Assist reconnects by itself |
+| `brainassist.call`: "Planned calls are off" | *Planned calls* is off in Brain Call, Brain Call has no phone, or it is older than 1.14.0 |
+| `brainassist.call`: "did not plan the call: …" | Brain Call's reason, e.g. a number that may not be dialed or a name that is no person with a number in *Callers* |
 | "Brain Call could not answer: …" | Brain Call reported a failure, e.g. from the Claude API. The rest of the sentence and the Brain Call log say which |
 
 ## Not yet
 
-Limits per person, planned calls from Home Assistant (`brainassist.call`, a to-do list of tasks). See
+Limits per person. See
 [brainassist#2](https://github.com/janlenck/brainassist/issues/2) and
 [braincall#50](https://github.com/janlenck/braincall/issues/50).
 

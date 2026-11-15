@@ -99,5 +99,6 @@ async def test_diagnostics_never_contain_the_token(hass: HomeAssistant, loaded: 
         "assistant": "Claudine",
         "phone": True,
         "home_assistant": True,
+        "tasks": False,
     }
     assert data["client_api"] == 1
