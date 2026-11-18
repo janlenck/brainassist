@@ -82,6 +82,7 @@ class StatusCoordinator(DataUpdateCoordinator[Status]):
         super().__init__(hass, LOGGER, config_entry=entry, name=f"{DOMAIN} status", update_interval=STATUS_INTERVAL)
         self.client = client
         self.line_api = line_api
+        self._pushed = 0  # braincall_state events taken over; a poll that started before one keeps its line
 
     def _registered(self, sip: Any) -> bool:
         """REGISTERING right after registered is pyVoIP registering again (every 2 minutes): still registered."""
@@ -90,6 +91,7 @@ class StatusCoordinator(DataUpdateCoordinator[Status]):
         return sip == SIP_REGISTERED
 
     async def _async_update_data(self) -> Status:
+        pushed = self._pushed
         try:
             health = await self.client.async_health()
         except BrainCallError as err:
@@ -105,7 +107,7 @@ class StatusCoordinator(DataUpdateCoordinator[Status]):
         if line not in LINE_STATES:
             line = "in_call" if health.get("busy") else "idle"
         call = (status or {}).get("call")
-        return Status(
+        polled = Status(
             answered=True,
             healthy=health.get("status") == "ok",
             problems=tuple(str(p) for p in health.get("problems") or ()),
@@ -113,29 +115,35 @@ class StatusCoordinator(DataUpdateCoordinator[Status]):
             line=line,
             call=call if isinstance(call, dict) and line != "idle" else None,
         )
+        if self._pushed != pushed and self.data is not None and self.data.answered:
+            # an event came while the poll waited for its answers: it is newer than what the poll read
+            return replace(polled, registered=self.data.registered, line=self.data.line, call=self.data.call)
+        return polled
 
     @callback
     def async_listen_events(self) -> None:
         """Take over braincall_state at once; stops with the config entry.
 
-        The event does not say which Brain Call sent it: with more than one connected, each asks its own."""
+        The event does not say which Brain Call sent it: with more than one set up (also a disabled or failed
+        entry, its Brain Call may still fire it), each asks its own. The event says nothing about health: after a
+        failed poll it asks /health again instead of taking the event over."""
 
         @callback
         def changed(event: Event) -> None:
             data = event.data
             if (
                 self.data is None
+                or not self.data.answered
                 or data.get("line") not in LINE_STATES
-                or len(self.hass.config_entries.async_loaded_entries(DOMAIN)) > 1
+                or len(self.hass.config_entries.async_entries(DOMAIN)) > 1
             ):
                 self.hass.async_create_task(self.async_request_refresh())
                 return
+            self._pushed += 1
             call = data.get("call")
             self.async_set_updated_data(
                 replace(
                     self.data,
-                    answered=True,
-                    healthy=self.data.healthy or not self.data.answered,
                     registered=self._registered(data.get("sip")),
                     line=data["line"],
                     call=call if isinstance(call, dict) and data["line"] != "idle" else None,

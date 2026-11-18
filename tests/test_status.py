@@ -1,8 +1,10 @@
 """Status entities: Connection, Phone and Line, from /health, /api/status and the event braincall_state."""
 
+import asyncio
 from dataclasses import replace
 
 from freezegun.api import FrozenDateTimeFactory
+from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 import pytest
@@ -112,9 +114,58 @@ async def test_brain_call_down(
     assert hass.states.get(PHONE).state == "unavailable"
     assert hass.states.get(LINE).state == "unavailable"
 
-    hass.bus.async_fire("braincall_state", {"line": "idle", "sip": "REGISTERED", "call": None})  # back
+    # an event says nothing about health: Brain Assist asks /health again, still down
+    hass.bus.async_fire("braincall_state", {"line": "idle", "sip": "REGISTERED", "call": None})
     await hass.async_block_till_done()
-    assert hass.states.get(CONNECTION).state == "on" and hass.states.get(LINE).state == "idle"
+    assert hass.states.get(CONNECTION).state == "off" and hass.states.get(LINE).state == "unavailable"
+
+
+async def test_an_event_after_a_failed_poll_asks_health_again(
+    hass: HomeAssistant, new: MockConfigEntry, brain_call, freezer: FrozenDateTimeFactory
+) -> None:
+    """Brain Call is back but unhealthy: the event must not turn Connection on."""
+    brain_call.health = BrainCallConnectionError("down")
+    await poll(hass, freezer)
+    brain_call.health = {
+        "status": "unhealthy",
+        "problems": ["SIP watchdog stopped"],
+        "sip": "REGISTERED",
+        "line": "ringing",
+    }
+    brain_call.status = {"line": "ringing", "sip": "REGISTERED", "phone": True, "call": CALL}
+    hass.bus.async_fire("braincall_state", {"line": "ringing", "sip": "REGISTERED", "call": CALL})
+    await hass.async_block_till_done()
+    assert hass.states.get(CONNECTION).state == "off"
+    assert hass.states.get(CONNECTION).attributes["problems"] == ["SIP watchdog stopped"]
+    assert hass.states.get(LINE).state == "ringing"
+
+
+async def test_a_poll_older_than_an_event_keeps_the_line_of_the_event(
+    hass: HomeAssistant, new: MockConfigEntry, brain_call
+) -> None:
+    """/api/status read idle, then braincall_state said ringing before the poll's answer came: ringing stays."""
+    coordinator = new.runtime_data.status
+    answered = asyncio.Event()
+
+    async def slow_status():
+        await answered.wait()
+        return {"line": "idle", "sip": "REGISTERED", "phone": True, "call": None}
+
+    brain_call.health.update(status="unhealthy", problems=["SIP watchdog stopped"])
+    coordinator.client.async_status = slow_status
+    refresh = hass.async_create_task(coordinator.async_refresh())
+    for _ in range(5):  # the poll is waiting for /api/status now
+        await asyncio.sleep(0)
+    hass.bus.async_fire("braincall_state", {"line": "ringing", "sip": "REGISTERED", "call": CALL})
+    for _ in range(5):
+        await asyncio.sleep(0)
+    assert coordinator.data.line == "ringing"
+    answered.set()
+    await refresh
+    await hass.async_block_till_done()
+    line = hass.states.get(LINE)
+    assert line.state == "ringing" and line.attributes["number"] == CALL["number"]
+    assert hass.states.get(CONNECTION).state == "off"  # health from the poll
 
 
 async def test_unhealthy_brain_call_says_why(
@@ -153,6 +204,20 @@ async def test_unknown_line_in_the_event_asks_again(hass: HomeAssistant, new: Mo
     hass.bus.async_fire("braincall_state", {"line": "on_hold", "sip": "REGISTERED"})
     await hass.async_block_till_done()
     assert hass.states.get(LINE).state == "in_call"
+
+
+async def test_a_disabled_second_entry_still_counts(hass: HomeAssistant, new: MockConfigEntry, brain_call) -> None:
+    """Its Brain Call may still fire braincall_state: the event is not taken over, each entry asks its own."""
+    MockConfigEntry(
+        domain="brainassist",
+        title="Other",
+        unique_id="http://other:8099",
+        data={"url": "http://other:8099", "token": "t"},
+        disabled_by=ConfigEntryDisabler.USER,
+    ).add_to_hass(hass)
+    hass.bus.async_fire("braincall_state", {"line": "ringing", "sip": "REGISTERED", "call": CALL})
+    await hass.async_block_till_done()
+    assert hass.states.get(LINE).state == "idle"
 
 
 async def test_with_two_brain_calls_each_asks_its_own(hass: HomeAssistant, new: MockConfigEntry, brain_call) -> None:
