@@ -108,6 +108,47 @@ async def test_version_says_whether_planned_calls_are_on(hass: HomeAssistant, ai
     assert (await client(hass).async_version()).tasks is True
 
 
+async def test_version_says_whether_the_line_api_exists(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker):
+    aioclient_mock.get(f"{URL}/api/version", json={"api": 1, "version": "1.19.0", "line": True})
+    assert (await client(hass).async_version()).line is True
+
+
+@pytest.mark.parametrize("status", [200, 503])
+async def test_health_answers_also_when_unhealthy(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, status):
+    body = {"status": "ok" if status == 200 else "unhealthy", "problems": [], "sip": "REGISTERED", "line": "idle"}
+    aioclient_mock.get(f"{URL}/health", status=status, json=body)
+    assert await client(hass).async_health() == body
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error"),
+    [
+        ({"status": 500, "text": "boom"}, BrainCallError),
+        ({"json": {"hello": "world"}}, BrainCallError),
+        ({"text": "<html>router</html>"}, BrainCallError),
+        ({"exc": aiohttp.ClientConnectionError("refused")}, BrainCallConnectionError),
+        ({"exc": TimeoutError()}, BrainCallConnectionError),
+    ],
+)
+async def test_health_failures(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, kwargs, error) -> None:
+    aioclient_mock.get(f"{URL}/health", **kwargs)
+    with pytest.raises(error):
+        await client(hass).async_health()
+
+
+async def test_status(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    body = {"line": "in_call", "sip": "REGISTERED", "phone": True, "call": {"number": "0151", "direction": "in"}}
+    aioclient_mock.get(f"{URL}/api/status", json=body)
+    assert await client(hass).async_status() == body
+    assert aioclient_mock.mock_calls[0][3]["Authorization"] == f"Bearer {TOKEN}"
+
+
+async def test_status_without_a_line(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    aioclient_mock.get(f"{URL}/api/status", json={"error": "nothing"})
+    with pytest.raises(BrainCallError):
+        await client(hass).async_status()
+
+
 async def test_tasks(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
     aioclient_mock.get(f"{URL}/api/tasks", json={"tasks": [{"id": "a1", "status": "planned"}, {"no": "id"}]})
     assert await client(hass).async_tasks() == [{"id": "a1", "status": "planned"}]

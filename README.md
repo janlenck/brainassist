@@ -31,6 +31,8 @@ access rules, the memory. Speech recognition and voice stay with Home Assistant.
   - 1.12.0 for one memory per person on the phone and in Assist
   - 1.13.0 for discovery (no address or token to type) and for Assist without notifications
   - 1.14.0 for [planned calls](#planned-calls) from Home Assistant
+  - 1.19.0 for the full [line state](#status-of-brain-call) (ringing, dialing, who is on the line); older ones
+    only say *in a call* or *idle*
 
 ## Installation
 
@@ -200,6 +202,64 @@ Restaurant an und reservier einen Tisch für vier"). With *Planned calls* on in 
 - **The result** comes as event `braincall_task_finished` from Brain Call (`id`, `status`, `summary`, `answers`,
   `steps`, `open_points`, …): use it as trigger in automations. Brain Assist adds no event of its own.
 
+## Status of Brain Call
+
+Three entities on the Brain Assist device show what Brain Call is doing. *Phone* and *Line* only exist when Brain
+Call has a phone.
+
+| Entity | Shows |
+|---|---|
+| *Connection* (`binary_sensor.brain_assist_connection`) | Brain Call answers and is healthy. Off with `problems` as attribute while Brain Call reports one (e.g. its SIP watchdog hangs) |
+| *Phone* (`binary_sensor.brain_assist_phone`) | Brain Call is registered at the FRITZ!Box |
+| *Line* (`sensor.brain_assist_line`) | `idle`, `ringing` (incoming, until answered), `dialing` (outbound, until answered), `in_call`. During a call the attributes `number`, `caller_name`, `direction` (`in`/`out`) and `since` |
+
+Brain Call 1.19.0 or newer fires the event `braincall_state` on every change, so ringing and the end of a call
+show at once; besides, Brain Assist asks every 30 seconds. An older Brain Call has no line state: *Line* is
+`in_call` while it is busy, `idle` otherwise, without attributes. Brain Call answers ringing calls right away, so
+`ringing` lasts a moment; `dialing` lasts until the other side answers.
+
+Dashboard example: the status, and who is on the line while a call runs:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: entities
+    title: Brain Call
+    entities:
+      - binary_sensor.brain_assist_connection
+      - binary_sensor.brain_assist_phone
+      - sensor.brain_assist_line
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: sensor.brain_assist_line
+        state: [ringing, dialing, in_call]
+    card:
+      type: markdown
+      content: >-
+        {% set line = states.sensor.brain_assist_line %}
+        {% if line.attributes.number is defined %}
+        **{{ line.attributes.caller_name or line.attributes.number }}**
+        ({{ 'incoming' if line.attributes.direction == 'in' else 'outgoing' }}),
+        {{ line.state | replace('_', ' ') }} since
+        {{ as_timestamp(line.attributes.since) | timestamp_custom('%H:%M') }}
+        {% else %}In a call{% endif %}
+```
+
+Automation example: a notification when the phone loses its registration for 5 minutes:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.brain_assist_phone
+    to: "off"
+    for: "00:05:00"
+actions:
+  - action: notify.notify
+    data:
+      message: Brain Call is not registered at the FRITZ!Box.
+```
+
 ## Troubleshooting
 
 | What you see | Why |
@@ -215,6 +275,8 @@ Restaurant an und reservier einen Tisch für vier"). With *Planned calls* on in 
 | Repair "Brain Call is too old / Brain Assist is too old" | The two were updated apart and no longer speak the same API version. Update the one named; Brain Assist reconnects by itself |
 | `brainassist.call`: "Planned calls are off" | *Planned calls* is off in Brain Call, Brain Call has no phone, or it is older than 1.14.0 |
 | `brainassist.call`: "did not plan the call: …" | Brain Call's reason, e.g. a number that may not be dialed or a name that is no person with a number in *Callers* |
+| *Line* only shows *In a call* or *Idle* | Brain Call is older than 1.19.0 |
+| *Connection* off, *Phone* and *Line* unavailable | Brain Call does not answer `/health`: not running, or the address changed |
 | "Brain Call could not answer: …" | Brain Call reported a failure, e.g. from the Claude API. The rest of the sentence and the Brain Call log say which |
 
 ## Not yet

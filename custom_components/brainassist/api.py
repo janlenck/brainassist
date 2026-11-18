@@ -52,6 +52,7 @@ class ServerInfo:
     phone: bool
     home_assistant: bool
     tasks: bool = False  # planned calls are on (Brain Call 1.14.0 or newer says so)
+    line: bool = False  # GET /api/status and the event braincall_state exist (Brain Call 1.19.0 or newer)
 
 
 def normalize_url(url: str) -> str:
@@ -105,7 +106,31 @@ class BrainCallClient:
             phone=bool(data.get("phone")),
             home_assistant=bool(data.get("home_assistant")),
             tasks=data.get("tasks") is True,
+            line=data.get("line") is True,
         )
+
+    async def async_health(self) -> dict[str, Any]:
+        """GET /health: status (ok / unhealthy), problems, sip, busy, phone and, since 1.19.0, line.
+        Brain Call answers 503 while unhealthy, with the same fields."""
+        try:
+            async with self._session.get(f"{self.url}/health", timeout=TIMEOUT) as resp:
+                if resp.status not in (200, 503):
+                    raise BrainCallError(f"Brain Call answered /health with {resp.status}")
+                data = await resp.json(content_type=None)
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise BrainCallConnectionError(f"Brain Call cannot be reached at {self.url}: {err}") from err
+        except ValueError as err:
+            raise BrainCallError(f"{self.url} did not answer like Brain Call") from err
+        if not isinstance(data, dict) or "status" not in data:
+            raise BrainCallError(f"{self.url} did not answer like Brain Call")
+        return data
+
+    async def async_status(self) -> dict[str, Any]:
+        """GET /api/status: line, sip, phone and the current call (number, caller_name, direction, since)."""
+        data = await self._json("GET", "/api/status")
+        if not isinstance(data, dict) or not isinstance(data.get("line"), str):
+            raise BrainCallError("Brain Call sent no line state")
+        return data
 
     async def _json(
         self, method: str, path: str, body: dict[str, Any] | None = None, limit: aiohttp.ClientTimeout = TIMEOUT

@@ -2,7 +2,8 @@
 
 Brain Call is the server (the brain, its tools, access rules and memory). This integration is the thin client
 inside Home Assistant: it provides the conversation agents and forwards each request to Brain Call. With planned
-calls on in Brain Call it also has the action brainassist.call and a to-do list of the planned calls.
+calls on in Brain Call it also has the action brainassist.call and a to-do list of the planned calls. Entities show
+whether Brain Call answers and, with a phone, whether it is registered and what the line is doing.
 """
 
 from dataclasses import dataclass
@@ -11,16 +12,16 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_TOKEN, CONF_URL, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
+from homeassistant.helpers import config_validation as cv, device_registry as dr, issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
 from .api import BrainCallAuthError, BrainCallClient, BrainCallError, ServerInfo
 from .const import API_VERSION, DOMAIN, ISSUE_INCOMPATIBLE
-from .coordinator import TasksCoordinator
+from .coordinator import StatusCoordinator, TasksCoordinator
 from .services import async_setup_services
 
-PLATFORMS = [Platform.CONVERSATION, Platform.TODO]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.CONVERSATION, Platform.SENSOR, Platform.TODO]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
@@ -31,9 +32,24 @@ class BrainAssistData:
     client: BrainCallClient
     info: ServerInfo
     tasks: TasksCoordinator | None = None  # planned calls, if they are on in Brain Call
+    status: StatusCoordinator | None = None  # reachable, phone registered, line
 
 
 type BrainAssistConfigEntry = ConfigEntry[BrainAssistData]
+
+
+def device_info(entry: BrainAssistConfigEntry) -> dr.DeviceInfo:
+    """The Brain Assist device of an entry, the same for every entity: whichever platform is set up first makes it."""
+    info = entry.runtime_data.info
+    return dr.DeviceInfo(
+        identifiers={(DOMAIN, entry.entry_id)},
+        name="Brain Assist",
+        manufacturer="Brain Call",
+        model=info.assistant or None,
+        sw_version=info.version or None,
+        entry_type=dr.DeviceEntryType.SERVICE,
+        configuration_url=entry.runtime_data.client.url,
+    )
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -79,7 +95,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: BrainAssistConfigEntry) 
         # a list that cannot be read now is no reason to hold back the agents: it is asked again in a minute
         await tasks.async_refresh()
         tasks.async_listen_events()
-    entry.runtime_data = BrainAssistData(client=client, info=info, tasks=tasks)
+    status = StatusCoordinator(hass, entry, client, line_api=info.line)
+    await status.async_refresh()  # never fails: Brain Call not answering is a state of its own
+    status.async_listen_events()
+    entry.runtime_data = BrainAssistData(client=client, info=info, tasks=tasks, status=status)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

@@ -109,12 +109,54 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "connection": {
+        "name": "Connection",
+        "state_attributes": {
+          "problems": {
+            "name": "Problems"
+          }
+        }
+      },
+      "phone": {
+        "name": "Phone"
+      }
+    },
     "conversation": {
       "voice": {
         "name": "Voice"
       },
       "text": {
         "name": "Text"
+      }
+    },
+    "sensor": {
+      "line": {
+        "name": "Line",
+        "state": {
+          "idle": "Idle",
+          "ringing": "Ringing",
+          "dialing": "Dialing",
+          "in_call": "In a call"
+        },
+        "state_attributes": {
+          "number": {
+            "name": "Number"
+          },
+          "caller_name": {
+            "name": "Name"
+          },
+          "direction": {
+            "name": "Direction",
+            "state": {
+              "in": "Incoming",
+              "out": "Outgoing"
+            }
+          },
+          "since": {
+            "name": "Since"
+          }
+        }
       }
     },
     "todo": {
