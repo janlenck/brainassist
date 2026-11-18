@@ -100,6 +100,64 @@ async def test_deleting_a_planned_call_cancels_it(hass: HomeAssistant, with_task
     assert hass.states.get(LIST).state == "1"
 
 
+WAITING = {
+    "id": "e5",
+    "status": "waiting",
+    "name": "Restaurant Seeblick",
+    "number": "045429876",
+    "goal": "Tisch für 6",
+    "next_try": "2026-11-16T09:00+01:00",
+    "not_after": "2026-11-16T20:00+01:00",
+    "requester": {"name": "Jan"},
+    "steps": [
+        {
+            "kind": "call_out",
+            "time": "2026-11-16T09:00:00+01:00",
+            "number": "045421234",
+            "outcome": "talked",
+            "result": "Schaut nach.",
+        },
+        {"kind": "requester", "time": "2026-11-16T09:30:00+01:00", "by": "Jan", "text": "Wir sind zu sechst."},
+        {
+            "kind": "call_out",
+            "time": "2026-11-16T10:00:00+01:00",
+            "number": "045429876",
+            "outcome": "message left",
+            "result": "Um Rückruf gebeten.",
+        },
+    ],
+    "result": {"summary": "Um Rückruf gebeten.", "open_points": ["Tisch für 6"]},
+}
+
+
+async def test_a_task_waiting_for_a_call_back_is_open_with_its_steps(
+    hass: HomeAssistant, entry: MockConfigEntry, brain_call
+) -> None:
+    """Brain Call 1.16.0 (#92): a task over several calls; waiting is open until the end of its time window."""
+    brain_call.info = replace(INFO, tasks=True)
+    brain_call.tasks = [dict(t) for t in TASKS] + [dict(WAITING)]
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get(LIST).state == "3"
+    listed = await items(hass)
+    assert [i["uid"] for i in listed] == ["c3", "b2", "e5", "d4", "a1"]
+    waiting = listed[2]
+    assert waiting["status"] == "needs_action" and waiting["due"] == "2026-11-16T20:00:00+01:00"
+    assert waiting["description"].splitlines() == [
+        "Status: waiting (for a call back until 2026-11-16 20:00)",
+        "Requested by: Jan",
+        "Number: 045429876",
+        "Steps:",
+        "1. 2026-11-16 09:00 Called 045421234: talked – Schaut nach.",
+        "2. 2026-11-16 09:30 Jan added: Wir sind zu sechst.",
+        "3. 2026-11-16 10:00 Called 045429876: message left – Um Rückruf gebeten.",
+        "Um Rückruf gebeten.",
+        "Open: Tisch für 6",
+    ]
+    await hass.services.async_call(TODO_DOMAIN, "remove_item", {"entity_id": LIST, "item": "e5"}, blocking=True)
+    assert brain_call.cancelled == ["e5"]
+
+
 @pytest.mark.parametrize(("uid", "key"), [("c3", "task_running"), ("a1", "task_finished")])
 async def test_running_or_finished_calls_cannot_be_deleted(hass: HomeAssistant, with_tasks, brain_call, uid, key):
     with pytest.raises(HomeAssistantError) as err:

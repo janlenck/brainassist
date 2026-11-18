@@ -192,6 +192,11 @@ Restaurant an und reservier einen Tisch für vier"). With *Planned calls* on in 
   attempt, then the finished ones of the last 30 days with their result. Deleting an open item cancels the call; a
   running or finished one cannot be taken back. It follows Brain Call's event `braincall_task_updated` and also
   asks once a minute.
+- **A task over several calls** (Brain Call 1.16.0 or newer): a task stays open until it is settled, e.g. when the
+  callee asks to be called again later or will call back. The item's description lists its steps (the calls, and
+  what the requester added). A task *waiting* for a call back stays open, due at the end of its time window, and
+  can be cancelled like a planned one. In Assist an administrator asks "Hat das Restaurant zurückgerufen?" or adds
+  a step: "Ruf nochmal an, wir sind doch zu sechst" (read back and stored after a yes).
 - **The result** comes as event `braincall_task_finished` from Brain Call (`id`, `status`, `summary`, `answers`,
   `steps`, `open_points`, …): use it as trigger in automations. Brain Assist adds no event of its own.
 

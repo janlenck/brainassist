@@ -1,7 +1,8 @@
 """The planned calls of Brain Call as a to-do list: open ones first, then the finished ones of the last 30 days.
 
-Deleting an item cancels a planned call. A call that is running cannot be cancelled, and a finished one stays in
-the list until Brain Call drops it after 30 days.
+A task may take several calls (Brain Call 1.16.0): its steps are listed in the description, and a task waiting for
+a call back is open until the end of its time window. Deleting an item cancels a planned or waiting task. A call
+that is running cannot be cancelled, and a finished one stays in the list until Brain Call drops it after 30 days.
 """
 
 from datetime import datetime
@@ -35,13 +36,29 @@ def _time(value: Any) -> datetime | None:
         return None
 
 
+def _step(step: dict[str, Any]) -> str:
+    """One step of a task's history in a line: when, which way, what came of it."""
+    when = str(step.get("time") or "")[:16].replace("T", " ")
+    if step.get("kind") == "requester":
+        return f"{when} {step.get('by') or 'Requester'} added: {step.get('text', '')}"
+    way = "Called back from" if step.get("kind") == "call_in" else "Called"
+    line = f"{when} {way} {step.get('number', '')}: {step.get('outcome', '')}"
+    return line + (f" – {step['result']}" if step.get("result") else "")
+
+
 def _description(task: dict[str, Any]) -> str:
-    """Status, who asked and the result in a few lines."""
+    """Status, who asked, the steps so far and the result in a few lines."""
     lines = [f"Status: {task.get('status', '?')}"]
+    if task.get("status") == "waiting" and task.get("not_after"):
+        lines[0] += f" (for a call back until {str(task['not_after'])[:16].replace('T', ' ')})"
     requester = (task.get("requester") or {}).get("name")
     if requester:
         lines.append(f"Requested by: {requester}")
     lines.append(f"Number: {task.get('number', '')}")
+    steps = [s for s in task.get("steps") or [] if isinstance(s, dict)]
+    if steps:
+        lines.append("Steps:")
+        lines += [f"{i}. {_step(s)}" for i, s in enumerate(steps, 1)]
     result = task.get("result") or {}
     if result.get("summary"):
         lines.append(str(result["summary"]))
@@ -53,6 +70,15 @@ def _description(task: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _due(task: dict[str, Any]) -> datetime | None:
+    """A planned task: its next call; a waiting one: the end of the wait for a call back."""
+    if task.get("status") == "planned":
+        return _time(task.get("next_try"))
+    if task.get("status") == "waiting":
+        return _time(task.get("not_after"))
+    return None
+
+
 def item(task: dict[str, Any]) -> TodoItem:
     """One planned call as a to-do item: whom, what for, and until it is over when it is due."""
     open_ = task.get("status") in OPEN_STATUSES
@@ -60,7 +86,7 @@ def item(task: dict[str, Any]) -> TodoItem:
         uid=str(task["id"]),
         summary=f"{task.get('name') or task.get('number') or '?'}: {task.get('goal') or task.get('task') or ''}",
         status=TodoItemStatus.NEEDS_ACTION if open_ else TodoItemStatus.COMPLETED,
-        due=_time(task.get("next_try")) if task.get("status") == "planned" else None,
+        due=_due(task),
         description=_description(task),
     )
 
@@ -69,7 +95,7 @@ def _order(task: dict[str, Any]) -> tuple:
     """Open tasks first, the next one on top (by the instant, whatever the UTC offset; without a time first);
     then the finished ones, the latest on top."""
     if task.get("status") in OPEN_STATUSES:
-        due = _time(task.get("next_try"))
+        due = _time(task.get("not_after") if task.get("status") == "waiting" else task.get("next_try"))
         return (0, due.timestamp() if due and due.tzinfo else float("-inf"))
     finished = _time(task.get("finished") or task.get("created"))
     return (1, -(finished.timestamp() if finished and finished.tzinfo else 0))
@@ -96,7 +122,7 @@ class BrainCallTasks(CoordinatorEntity[TasksCoordinator], TodoListEntity):
         return [item(t) for t in sorted(self.coordinator.data, key=_order)]
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
-        """Cancel planned calls. Running or finished ones cannot be taken back."""
+        """Cancel planned or waiting calls. Running or finished ones cannot be taken back."""
         by_id = {str(t["id"]): t for t in self.coordinator.data or []}
         for uid in uids:
             status = (by_id.get(uid) or {}).get("status")
