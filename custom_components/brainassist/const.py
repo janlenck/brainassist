@@ -24,3 +24,9 @@ EVENT_TASK_FINISHED = "braincall_task_finished"
 # waiting (Brain Call 1.16.0): open, waiting for a call back until not_after
 OPEN_STATUSES = ("planned", "running", "waiting")
 SERVICE_CALL = "call"
+
+# Line state (Brain Call 1.19.0): GET /api/status and the event braincall_state on every change of line or SIP
+EVENT_STATE = "braincall_state"
+LINE_STATES = ("idle", "ringing", "dialing", "in_call")
+SIP_REGISTERED = "REGISTERED"
+SIP_REGISTERING = "REGISTERING"  # also for a moment every 2 minutes while the phone registers again

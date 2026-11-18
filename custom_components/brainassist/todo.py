@@ -11,11 +11,10 @@ from typing import Any
 from homeassistant.components.todo import TodoItem, TodoItemStatus, TodoListEntity, TodoListEntityFeature
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import BrainAssistConfigEntry
+from . import BrainAssistConfigEntry, device_info
 from .api import BrainCallError, BrainCallRefusedError
 from .const import DOMAIN, OPEN_STATUSES
 from .coordinator import TasksCoordinator
@@ -112,7 +111,7 @@ class BrainCallTasks(CoordinatorEntity[TasksCoordinator], TodoListEntity):
         """Belongs to the Brain Assist device of the entry."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_tasks"
-        self._attr_device_info = dr.DeviceInfo(identifiers={(DOMAIN, entry.entry_id)})
+        self._attr_device_info = device_info(entry)
 
     @property
     def todo_items(self) -> list[TodoItem] | None:

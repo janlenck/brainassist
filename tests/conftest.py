@@ -15,6 +15,8 @@ from custom_components.brainassist.const import DOMAIN
 URL = "http://127.0.0.1:8099"
 TOKEN = "secret-token"
 INFO = ServerInfo(api=1, version="1.11.0", assistant="Claudine", phone=True, home_assistant=True)
+# GET /health of a Brain Call older than 1.19.0: no line yet
+HEALTH = {"status": "ok", "problems": [], "sip": "REGISTERED", "busy": False, "phone": True}
 
 
 @pytest.fixture(autouse=True)
@@ -38,6 +40,8 @@ class FakeBrainCall:
     plan_error: Exception | None = None
     cancelled: list[str] = []
     cancel_error: Exception | None = None
+    health: dict[str, Any] | Exception = {}  # what GET /health answers
+    status: dict[str, Any] | Exception = {}  # what GET /api/status answers
 
     def __init__(self, session, url: str, token: str) -> None:
         self.url = url
@@ -47,6 +51,16 @@ class FakeBrainCall:
         if isinstance(FakeBrainCall.info, Exception):
             raise FakeBrainCall.info
         return FakeBrainCall.info
+
+    async def async_health(self) -> dict[str, Any]:
+        if isinstance(FakeBrainCall.health, Exception):
+            raise FakeBrainCall.health
+        return dict(FakeBrainCall.health)
+
+    async def async_status(self) -> dict[str, Any]:
+        if isinstance(FakeBrainCall.status, Exception):
+            raise FakeBrainCall.status
+        return dict(FakeBrainCall.status)
 
     async def async_tasks(self) -> list[dict[str, Any]]:
         if isinstance(FakeBrainCall.tasks, Exception):
@@ -90,6 +104,8 @@ def brain_call(monkeypatch) -> type[FakeBrainCall]:
     FakeBrainCall.plan_error = None
     FakeBrainCall.cancelled = []
     FakeBrainCall.cancel_error = None
+    FakeBrainCall.health = dict(HEALTH)
+    FakeBrainCall.status = {"line": "idle", "sip": "REGISTERED", "phone": True, "call": None}
     monkeypatch.setattr("custom_components.brainassist.BrainCallClient", FakeBrainCall)
     monkeypatch.setattr("custom_components.brainassist.config_flow.BrainCallClient", FakeBrainCall)
     return FakeBrainCall
@@ -120,4 +136,4 @@ def answer(*texts: str, continue_conversation: bool = False) -> list[dict[str, A
     ]
 
 
-__all__ = ["INFO", "TOKEN", "URL", "BrainCallError", "FakeBrainCall", "answer"]
+__all__ = ["HEALTH", "INFO", "TOKEN", "URL", "BrainCallError", "FakeBrainCall", "answer"]

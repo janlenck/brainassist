@@ -1,5 +1,23 @@
 {
   "entity": {
+    "binary_sensor": {
+      "phone": {
+        "default": "mdi:phone-check",
+        "state": {
+          "off": "mdi:phone-off"
+        }
+      }
+    },
+    "sensor": {
+      "line": {
+        "default": "mdi:phone-hangup",
+        "state": {
+          "ringing": "mdi:phone-ring",
+          "dialing": "mdi:phone-outgoing",
+          "in_call": "mdi:phone-in-talk"
+        }
+      }
+    },
     "todo": {
       "tasks": {
         "default": "mdi:phone-clock"

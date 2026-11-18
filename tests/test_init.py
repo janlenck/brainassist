@@ -23,6 +23,9 @@ async def test_setup_creates_both_agents(hass: HomeAssistant, loaded: MockConfig
     assert {e.unique_id: e.entity_id for e in entities} == {
         f"{loaded.entry_id}_voice": "conversation.brain_assist_voice",
         f"{loaded.entry_id}_text": "conversation.brain_assist_text",
+        f"{loaded.entry_id}_connection": "binary_sensor.brain_assist_connection",
+        f"{loaded.entry_id}_phone": "binary_sensor.brain_assist_phone",
+        f"{loaded.entry_id}_line": "sensor.brain_assist_line",
     }
     assert hass.states.get("conversation.brain_assist_voice").name == "Brain Assist Voice"
     (device,) = dr.async_entries_for_config_entry(dr.async_get(hass), loaded.entry_id)
@@ -100,5 +103,6 @@ async def test_diagnostics_never_contain_the_token(hass: HomeAssistant, loaded: 
         "phone": True,
         "home_assistant": True,
         "tasks": False,
+        "line": False,
     }
     assert data["client_api"] == 1

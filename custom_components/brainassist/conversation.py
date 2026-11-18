@@ -14,9 +14,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er, intent, llm
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from . import BrainAssistConfigEntry
+from . import BrainAssistConfigEntry, device_info
 from .api import BrainCallAuthError, BrainCallError
-from .const import CHANNELS, DOMAIN, LOGGER
+from .const import CHANNELS, LOGGER
 
 
 async def async_setup_entry(
@@ -37,18 +37,9 @@ class BrainAssistEntity(conversation.ConversationEntity):
         """Set up the agent for one channel ("voice" or "text")."""
         self.entry = entry
         self.channel = channel
-        info = entry.runtime_data.info
         self._attr_unique_id = f"{entry.entry_id}_{channel}"
         self._attr_translation_key = channel
-        self._attr_device_info = dr.DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name="Brain Assist",
-            manufacturer="Brain Call",
-            model=info.assistant or None,
-            sw_version=info.version or None,
-            entry_type=dr.DeviceEntryType.SERVICE,
-            configuration_url=entry.runtime_data.client.url,
-        )
+        self._attr_device_info = device_info(entry)
 
     @property
     def supported_languages(self) -> list[str] | Literal["*"]:

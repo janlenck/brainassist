@@ -109,12 +109,54 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "connection": {
+        "name": "З'єднання",
+        "state_attributes": {
+          "problems": {
+            "name": "Проблеми"
+          }
+        }
+      },
+      "phone": {
+        "name": "Телефон"
+      }
+    },
     "conversation": {
       "voice": {
         "name": "Голос"
       },
       "text": {
         "name": "Текст"
+      }
+    },
+    "sensor": {
+      "line": {
+        "name": "Лінія",
+        "state": {
+          "idle": "Вільна",
+          "ringing": "Дзвонить",
+          "dialing": "Набір номера",
+          "in_call": "Розмова"
+        },
+        "state_attributes": {
+          "number": {
+            "name": "Номер"
+          },
+          "caller_name": {
+            "name": "Ім'я"
+          },
+          "direction": {
+            "name": "Напрямок",
+            "state": {
+              "in": "Вхідний",
+              "out": "Вихідний"
+            }
+          },
+          "since": {
+            "name": "Від"
+          }
+        }
       }
     },
     "todo": {
