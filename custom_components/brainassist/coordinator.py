@@ -1,8 +1,10 @@
-"""What a Brain Call server says, kept up to date: its planned calls for the to-do list, and its status and line.
+"""What a Brain Call server says, kept up to date: its planned calls for the to-do list, its status and line, and
+the owner's messages.
 
 Brain Call fires braincall_task_updated on every status change and braincall_task_finished at the end; either
 makes the list ask again at once. Brain Call without a connection to Home Assistant fires nothing, so the list
-also asks every minute. The line works the same way with braincall_state and every 30 seconds.
+also asks every minute. The line works the same way with braincall_state and every 30 seconds, the messages with
+braincall_messages_updated and every minute.
 """
 
 from dataclasses import dataclass, replace
@@ -16,6 +18,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import BrainCallClient, BrainCallError
 from .const import (
     DOMAIN,
+    EVENT_MESSAGES,
     EVENT_STATE,
     EVENT_TASK_FINISHED,
     EVENT_TASK_UPDATED,
@@ -152,3 +155,31 @@ class StatusCoordinator(DataUpdateCoordinator[Status]):
 
         assert self.config_entry is not None
         self.config_entry.async_on_unload(self.hass.bus.async_listen(EVENT_STATE, changed))
+
+
+class MessagesCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    """GET /api/messages, after every braincall_messages_updated and once a minute (Brain Call 1.20.0).
+
+    The data: {"messages": [...] newest first, "open": n, "new": n, "callbacks": n}."""
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: BrainCallClient) -> None:
+        """Ask the server of this entry."""
+        super().__init__(hass, LOGGER, config_entry=entry, name=f"{DOMAIN} messages", update_interval=UPDATE_INTERVAL)
+        self.client = client
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        try:
+            return await self.client.async_messages()
+        except BrainCallError as err:
+            raise UpdateFailed(str(err)) from err
+
+    @callback
+    def async_listen_events(self) -> None:
+        """Ask again whenever Brain Call says its messages changed; stops with the config entry."""
+
+        @callback
+        def changed(event: Event) -> None:
+            self.hass.async_create_task(self.async_request_refresh())
+
+        assert self.config_entry is not None
+        self.config_entry.async_on_unload(self.hass.bus.async_listen(EVENT_MESSAGES, changed))

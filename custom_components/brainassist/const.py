@@ -30,3 +30,6 @@ EVENT_STATE = "braincall_state"
 LINE_STATES = ("idle", "ringing", "dialing", "in_call")
 SIP_REGISTERED = "REGISTERED"
 SIP_REGISTERING = "REGISTERING"  # also for a moment every 2 minutes while the phone registers again
+
+# The owner's messages (Brain Call 1.20.0): GET /api/messages, and this event on every change of them
+EVENT_MESSAGES = "braincall_messages_updated"

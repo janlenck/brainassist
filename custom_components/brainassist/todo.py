@@ -1,8 +1,13 @@
-"""The planned calls of Brain Call as a to-do list: open ones first, then the finished ones of the last 30 days.
+"""Two to-do lists of Brain Call: the planned calls, and the owner's messages.
 
-A task may take several calls (Brain Call 1.16.0): its steps are listed in the description, and a task waiting for
-a call back is open until the end of its time window. Deleting an item cancels a planned or waiting task. A call
-that is running cannot be cancelled, and a finished one stays in the list until Brain Call drops it after 30 days.
+Planned calls: open ones first, then the finished ones of the last 30 days. A task may take several calls (Brain
+Call 1.16.0): its steps are listed in the description, and a task waiting for a call back is open until the end of
+its time window. Deleting an item cancels a planned or waiting task. A call that is running cannot be cancelled, and
+a finished one stays in the list until Brain Call drops it after 30 days.
+
+Messages (Brain Call 1.20.0): the calls Brain Call took for the owner. Open is what the owner has not heard yet and
+every call back that is not done; ticking an item off marks it done in Brain Call, so Claudine stops mentioning it
+on the phone, and unticking opens it again. Deleting removes it from Brain Call.
 """
 
 from datetime import datetime
@@ -17,15 +22,19 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import BrainAssistConfigEntry, device_info
 from .api import BrainCallError, BrainCallRefusedError
 from .const import DOMAIN, OPEN_STATUSES
-from .coordinator import TasksCoordinator
+from .coordinator import MessagesCoordinator, TasksCoordinator
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: BrainAssistConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
-    """The list, if planned calls are on in Brain Call."""
+    """The planned calls, if they are on in Brain Call; the messages, if Brain Call has them."""
+    entities: list[TodoListEntity] = []
     if entry.runtime_data.tasks is not None:
-        async_add_entities([BrainCallTasks(entry, entry.runtime_data.tasks)])
+        entities.append(BrainCallTasks(entry, entry.runtime_data.tasks))
+    if entry.runtime_data.messages is not None:
+        entities.append(BrainCallMessages(entry, entry.runtime_data.messages))
+    async_add_entities(entities)
 
 
 def _time(value: Any) -> datetime | None:
@@ -146,3 +155,89 @@ class BrainCallTasks(CoordinatorEntity[TasksCoordinator], TodoListEntity):
             ) from err
         finally:
             await self.coordinator.async_request_refresh()
+
+
+def message_open(message: dict[str, Any]) -> bool:
+    """Something for the owner: not heard yet, or a call back that is not done (as Brain Call counts it)."""
+    return not message.get("done") and (not message.get("heard") or bool(message.get("callback")))
+
+
+def _message_description(message: dict[str, Any]) -> str:
+    """When, who, what they want, the call back and what Brain Call did about the caller."""
+    when = str(message.get("time") or "")[:16].replace("T", " ")
+    lines = [f"{when} {message.get('number') or 'number withheld'}"]
+    if message.get("kind") == "missed":
+        lines[0] += " (missed: the line was busy)"
+    elif message.get("duration_s") is not None:
+        lines[0] += f" ({message['duration_s']} s)"
+    if message.get("summary"):
+        lines.append(str(message["summary"]))
+    if message.get("callback"):
+        lines.append("Call back wanted" + (f": {message['when']}" if message.get("when") else ""))
+    if message.get("note"):
+        lines.append(str(message["note"]))
+    return "\n".join(lines)
+
+
+def message_item(message: dict[str, Any]) -> TodoItem:
+    """One message as a to-do item: who called and, for a call back, that one is wanted."""
+    who = message.get("name") or message.get("number") or "?"
+    what = "call back" if message.get("callback") else ("missed call" if message.get("kind") == "missed" else "")
+    return TodoItem(
+        uid=str(message["id"]),
+        summary=f"{who}: {what}" if what else str(who),
+        status=TodoItemStatus.NEEDS_ACTION if message_open(message) else TodoItemStatus.COMPLETED,
+        description=_message_description(message),
+    )
+
+
+class BrainCallMessages(CoordinatorEntity[MessagesCoordinator], TodoListEntity):
+    """The calls Brain Call took for the owner: open ones first, the newest on top."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "messages"
+    _attr_supported_features = TodoListEntityFeature.UPDATE_TODO_ITEM | TodoListEntityFeature.DELETE_TODO_ITEM
+
+    def __init__(self, entry: BrainAssistConfigEntry, coordinator: MessagesCoordinator) -> None:
+        """Belongs to the Brain Assist device of the entry."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_messages"
+        self._attr_device_info = device_info(entry)
+
+    @property
+    def todo_items(self) -> list[TodoItem] | None:
+        """Open messages first, then the others; newest first in each (Brain Call sends them newest first)."""
+        if self.coordinator.data is None:
+            return None
+        messages = self.coordinator.data["messages"]
+        return [message_item(m) for m in sorted(messages, key=lambda m: not message_open(m))]
+
+    async def _change(self, call) -> None:
+        try:
+            await call
+        except BrainCallError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="cannot_connect",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        finally:
+            await self.coordinator.async_request_refresh()
+
+    async def async_update_todo_item(self, item: TodoItem) -> None:
+        """Ticked off: done (and heard). Unticked: open again, as if it was new."""
+        assert item.uid is not None
+        client = self.coordinator.client
+        if item.status == TodoItemStatus.COMPLETED:
+            await self._change(client.async_update_message(item.uid, heard=True, done=True))
+        else:
+            await self._change(client.async_update_message(item.uid, heard=False, done=False))
+
+    async def async_delete_todo_items(self, uids: list[str]) -> None:
+        """Remove messages from Brain Call."""
+
+        async def delete() -> None:
+            for uid in uids:
+                await self.coordinator.client.async_delete_message(uid)
+
+        await self._change(delete())

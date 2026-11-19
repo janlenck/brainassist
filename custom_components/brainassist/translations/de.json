@@ -157,11 +157,52 @@
             "name": "Seit"
           }
         }
+      },
+      "open_messages": {
+        "name": "Offene Nachrichten",
+        "state_attributes": {
+          "new": {
+            "name": "Neu"
+          },
+          "callbacks": {
+            "name": "Rückrufe"
+          }
+        }
+      },
+      "last_message": {
+        "name": "Letzte Nachricht",
+        "state_attributes": {
+          "name": {
+            "name": "Name"
+          },
+          "number": {
+            "name": "Nummer"
+          },
+          "summary": {
+            "name": "Zusammenfassung"
+          },
+          "callback": {
+            "name": "Rückruf erbeten"
+          },
+          "when": {
+            "name": "Rückruf wann"
+          },
+          "kind": {
+            "name": "Art",
+            "state": {
+              "message": "Nachricht",
+              "missed": "Verpasster Anruf"
+            }
+          }
+        }
       }
     },
     "todo": {
       "tasks": {
         "name": "Geplante Anrufe"
+      },
+      "messages": {
+        "name": "Nachrichten"
       }
     }
   },
