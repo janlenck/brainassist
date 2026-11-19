@@ -157,11 +157,52 @@
             "name": "Від"
           }
         }
+      },
+      "open_messages": {
+        "name": "Відкриті повідомлення",
+        "state_attributes": {
+          "new": {
+            "name": "Нові"
+          },
+          "callbacks": {
+            "name": "Зворотні дзвінки"
+          }
+        }
+      },
+      "last_message": {
+        "name": "Останнє повідомлення",
+        "state_attributes": {
+          "name": {
+            "name": "Ім’я"
+          },
+          "number": {
+            "name": "Номер"
+          },
+          "summary": {
+            "name": "Підсумок"
+          },
+          "callback": {
+            "name": "Просить передзвонити"
+          },
+          "when": {
+            "name": "Коли передзвонити"
+          },
+          "kind": {
+            "name": "Тип",
+            "state": {
+              "message": "Повідомлення",
+              "missed": "Пропущений дзвінок"
+            }
+          }
+        }
       }
     },
     "todo": {
       "tasks": {
         "name": "Заплановані дзвінки"
+      },
+      "messages": {
+        "name": "Повідомлення"
       }
     }
   },

@@ -53,6 +53,7 @@ class ServerInfo:
     home_assistant: bool
     tasks: bool = False  # planned calls are on (Brain Call 1.14.0 or newer says so)
     line: bool = False  # GET /api/status and the event braincall_state exist (Brain Call 1.19.0 or newer)
+    messages: bool = False  # GET /api/messages and braincall_messages_updated exist (Brain Call 1.20.0 or newer)
 
 
 def normalize_url(url: str) -> str:
@@ -107,6 +108,7 @@ class BrainCallClient:
             home_assistant=bool(data.get("home_assistant")),
             tasks=data.get("tasks") is True,
             line=data.get("line") is True,
+            messages=data.get("messages") is True,
         )
 
     async def async_health(self) -> dict[str, Any]:
@@ -165,6 +167,28 @@ class BrainCallClient:
     async def async_cancel_task(self, task_id: str) -> None:
         """Cancel a planned call (DELETE /api/tasks/<id>); a running or finished one is refused (BrainCallError)."""
         await self._json("DELETE", f"/api/tasks/{quote(task_id, safe='')}")
+
+    async def async_messages(self) -> dict[str, Any]:
+        """The owner's messages (GET /api/messages): the calls Brain Call took for them, newest first, with the
+        counts open, new and callbacks."""
+        data = await self._json("GET", "/api/messages")
+        if not isinstance(data, dict) or not isinstance(data.get("messages"), list):
+            raise BrainCallError("Brain Call sent no list of messages")
+        return {
+            "messages": [m for m in data["messages"] if isinstance(m, dict) and m.get("id")],
+            **{k: data.get(k) if isinstance(data.get(k), int) else 0 for k in ("open", "new", "callbacks")},
+        }
+
+    async def async_update_message(self, message_id: str, **change: bool) -> dict[str, Any]:
+        """Set or clear heard and done of a message (PATCH /api/messages/<id>); the entry as it is now."""
+        data = await self._json("PATCH", f"/api/messages/{quote(message_id, safe='')}", change)
+        if not isinstance(data, dict) or not data.get("id"):
+            raise BrainCallError("Brain Call did not answer with the message")
+        return data
+
+    async def async_delete_message(self, message_id: str) -> None:
+        """Remove a message (DELETE /api/messages/<id>)."""
+        await self._json("DELETE", f"/api/messages/{quote(message_id, safe='')}")
 
     async def async_converse(self, payload: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """Send one Assist request; yields the events of the answer as they arrive (JSON lines)."""

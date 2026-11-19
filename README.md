@@ -33,6 +33,7 @@ access rules, the memory. Speech recognition and voice stay with Home Assistant.
   - 1.14.0 for [planned calls](#planned-calls) from Home Assistant
   - 1.19.0 for the full [line state](#status-of-brain-call) (ringing, dialing, who is on the line); older ones
     only say *in a call* or *idle*
+  - 1.20.0 for the [messages](#messages) (the calls Brain Call took for you, call backs to tick off)
 
 ## Installation
 
@@ -260,6 +261,49 @@ actions:
       message: Brain Call is not registered at the FRITZ!Box.
 ```
 
+## Messages
+
+With Brain Call 1.20.0 or newer, the calls Brain Call took for you are on the Brain Assist device: who called, what
+they want, whether they want a call back. It is the same list Claudine reads to you on the phone ("Hat jemand
+angerufen?"), so ticking off works in both places.
+
+| Entity | Shows |
+|---|---|
+| *Messages* (`todo.brain_assist_messages`) | One item per call: "Name: call back", "Name: missed call" or just the name. Open: not heard yet, or a call back not done. The description has time, number, duration, the summary, when a call back suits them and whether the caller was saved as a new contact. Tick an item off = done in Brain Call (Claudine stops mentioning it); untick = open again; delete = removed in Brain Call |
+| *Open messages* (`sensor.brain_assist_open_messages`) | How many are open; attributes `new` (not heard yet) and `callbacks` (call backs not done) |
+| *Last message* (`sensor.brain_assist_last_message`) | When the latest call for you ended; attributes `name`, `number`, `summary`, `callback`, `when`, `kind` (`message` / `missed`) |
+
+Brain Call fires `braincall_messages_updated` on every change, so a new call shows at once; besides, Brain Assist
+asks every minute. Brain Call keeps messages 30 days, an open call back up to 90; a call back is also done when
+Brain Call talked with that number on an outgoing call.
+
+**Who sees them:** every Home Assistant user who can see the entities reads every caller's summary. If that is not
+wanted, hide the entities or keep them off dashboards others use.
+
+Dashboard example: the open call backs.
+
+```yaml
+type: todo-list
+entity: todo.brain_assist_messages
+hide_completed: true
+```
+
+Automation example: a notification on your phone when a caller asks for a call back.
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: sensor.brain_assist_last_message
+conditions:
+  - condition: template
+    value_template: "{{ state_attr('sensor.brain_assist_last_message', 'callback') }}"
+actions:
+  - action: notify.notify
+    data:
+      title: "Call back: {{ state_attr('sensor.brain_assist_last_message', 'name') or state_attr('sensor.brain_assist_last_message', 'number') }}"
+      message: "{{ state_attr('sensor.brain_assist_last_message', 'summary') }}"
+```
+
 ## Troubleshooting
 
 | What you see | Why |
@@ -276,6 +320,7 @@ actions:
 | `brainassist.call`: "Planned calls are off" | *Planned calls* is off in Brain Call, Brain Call has no phone, or it is older than 1.14.0 |
 | `brainassist.call`: "did not plan the call: …" | Brain Call's reason, e.g. a number that may not be dialed or a name that is no person with a number in *Callers* |
 | *Line* only shows *In a call* or *Idle* | Brain Call is older than 1.19.0 |
+| No *Messages* list | Brain Call is older than 1.20.0 |
 | *Connection* off, *Phone* and *Line* unavailable | Brain Call does not answer `/health`: not running, or the address changed |
 | "Brain Call could not answer: …" | Brain Call reported a failure, e.g. from the Claude API. The rest of the sentence and the Brain Call log say which |
 

@@ -157,11 +157,52 @@
             "name": "Since"
           }
         }
+      },
+      "open_messages": {
+        "name": "Open messages",
+        "state_attributes": {
+          "new": {
+            "name": "New"
+          },
+          "callbacks": {
+            "name": "Call backs"
+          }
+        }
+      },
+      "last_message": {
+        "name": "Last message",
+        "state_attributes": {
+          "name": {
+            "name": "Name"
+          },
+          "number": {
+            "name": "Number"
+          },
+          "summary": {
+            "name": "Summary"
+          },
+          "callback": {
+            "name": "Call back wanted"
+          },
+          "when": {
+            "name": "Call back when"
+          },
+          "kind": {
+            "name": "Kind",
+            "state": {
+              "message": "Message",
+              "missed": "Missed call"
+            }
+          }
+        }
       }
     },
     "todo": {
       "tasks": {
         "name": "Planned calls"
+      },
+      "messages": {
+        "name": "Messages"
       }
     }
   },

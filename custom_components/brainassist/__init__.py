@@ -3,7 +3,8 @@
 Brain Call is the server (the brain, its tools, access rules and memory). This integration is the thin client
 inside Home Assistant: it provides the conversation agents and forwards each request to Brain Call. With planned
 calls on in Brain Call it also has the action brainassist.call and a to-do list of the planned calls. Entities show
-whether Brain Call answers and, with a phone, whether it is registered and what the line is doing.
+whether Brain Call answers and, with a phone, whether it is registered and what the line is doing. With Brain Call
+1.20.0 the calls it took for the owner are a to-do list of messages, ticked off here and on the phone alike.
 """
 
 from dataclasses import dataclass
@@ -18,7 +19,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .api import BrainCallAuthError, BrainCallClient, BrainCallError, ServerInfo
 from .const import API_VERSION, DOMAIN, ISSUE_INCOMPATIBLE
-from .coordinator import StatusCoordinator, TasksCoordinator
+from .coordinator import MessagesCoordinator, StatusCoordinator, TasksCoordinator
 from .services import async_setup_services
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.CONVERSATION, Platform.SENSOR, Platform.TODO]
@@ -33,6 +34,7 @@ class BrainAssistData:
     info: ServerInfo
     tasks: TasksCoordinator | None = None  # planned calls, if they are on in Brain Call
     status: StatusCoordinator | None = None  # reachable, phone registered, line
+    messages: MessagesCoordinator | None = None  # the owner's messages, Brain Call 1.20.0 or newer
 
 
 type BrainAssistConfigEntry = ConfigEntry[BrainAssistData]
@@ -98,7 +100,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: BrainAssistConfigEntry) 
     status = StatusCoordinator(hass, entry, client, line_api=info.line)
     await status.async_refresh()  # never fails: Brain Call not answering is a state of its own
     status.async_listen_events()
-    entry.runtime_data = BrainAssistData(client=client, info=info, tasks=tasks, status=status)
+    messages = None
+    if info.messages:
+        messages = MessagesCoordinator(hass, entry, client)
+        await messages.async_refresh()  # like the tasks: asked again in a minute if it cannot be read now
+        messages.async_listen_events()
+    entry.runtime_data = BrainAssistData(client=client, info=info, tasks=tasks, status=status, messages=messages)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

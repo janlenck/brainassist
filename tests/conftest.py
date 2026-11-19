@@ -42,6 +42,9 @@ class FakeBrainCall:
     cancel_error: Exception | None = None
     health: dict[str, Any] | Exception = {}  # what GET /health answers
     status: dict[str, Any] | Exception = {}  # what GET /api/status answers
+    messages: list[dict[str, Any]] | Exception = []  # the entries GET /api/messages answers, newest first
+    message_changes: list[tuple[str, dict[str, bool]]] = []  # PATCH /api/messages/<id>
+    deleted_messages: list[str] = []
 
     def __init__(self, session, url: str, token: str) -> None:
         self.url = url
@@ -84,6 +87,37 @@ class FakeBrainCall:
             if task["id"] == task_id:
                 task["status"] = "cancelled"
 
+    async def async_messages(self) -> dict[str, Any]:
+        if isinstance(FakeBrainCall.messages, Exception):
+            raise FakeBrainCall.messages
+        items = [dict(m) for m in FakeBrainCall.messages]
+        open_ = [m for m in items if not m.get("done") and (not m.get("heard") or m.get("callback"))]
+        return {
+            "messages": items,
+            "open": len(open_),
+            "new": sum(1 for m in open_ if not m.get("heard")),
+            "callbacks": sum(1 for m in open_ if m.get("callback")),
+        }
+
+    async def async_update_message(self, message_id: str, **change: bool) -> dict[str, Any]:
+        if isinstance(FakeBrainCall.messages, Exception):
+            raise FakeBrainCall.messages
+        FakeBrainCall.message_changes.append((message_id, change))
+        for m in FakeBrainCall.messages:
+            if m["id"] == message_id:
+                for key, value in change.items():
+                    if value:
+                        m[key] = "2026-11-19T20:00:00+00:00"
+                    else:
+                        m.pop(key, None)
+                return dict(m)
+        raise BrainCallError("Brain Call answered 404: not found")
+
+    async def async_delete_message(self, message_id: str) -> None:
+        FakeBrainCall.deleted_messages.append(message_id)
+        if isinstance(FakeBrainCall.messages, list):
+            FakeBrainCall.messages = [m for m in FakeBrainCall.messages if m["id"] != message_id]
+
     async def async_converse(self, payload: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         FakeBrainCall.requests.append(payload)
         for event in FakeBrainCall.events:
@@ -106,6 +140,9 @@ def brain_call(monkeypatch) -> type[FakeBrainCall]:
     FakeBrainCall.cancel_error = None
     FakeBrainCall.health = dict(HEALTH)
     FakeBrainCall.status = {"line": "idle", "sip": "REGISTERED", "phone": True, "call": None}
+    FakeBrainCall.messages = []
+    FakeBrainCall.message_changes = []
+    FakeBrainCall.deleted_messages = []
     monkeypatch.setattr("custom_components.brainassist.BrainCallClient", FakeBrainCall)
     monkeypatch.setattr("custom_components.brainassist.config_flow.BrainCallClient", FakeBrainCall)
     return FakeBrainCall

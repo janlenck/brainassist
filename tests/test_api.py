@@ -113,6 +113,45 @@ async def test_version_says_whether_the_line_api_exists(hass: HomeAssistant, aio
     assert (await client(hass).async_version()).line is True
 
 
+async def test_version_says_whether_the_messages_exist(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker):
+    aioclient_mock.get(f"{URL}/api/version", json={"api": 1, "version": "1.20.0", "messages": True})
+    info = await client(hass).async_version()
+    assert info.messages is True and info.line is False
+
+
+async def test_messages(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    body = {"messages": [{"id": "ab12", "number": "0451"}, {"number": "no id"}, "junk"], "open": 1, "new": "x"}
+    aioclient_mock.get(f"{URL}/api/messages", json=body)
+    assert await client(hass).async_messages() == {
+        "messages": [{"id": "ab12", "number": "0451"}],
+        "open": 1,
+        "new": 0,
+        "callbacks": 0,
+    }
+    assert aioclient_mock.mock_calls[0][3]["Authorization"] == f"Bearer {TOKEN}"
+
+
+async def test_messages_without_a_list(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    aioclient_mock.get(f"{URL}/api/messages", json={"error": "?"})
+    with pytest.raises(BrainCallError):
+        await client(hass).async_messages()
+
+
+async def test_update_and_delete_a_message(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    aioclient_mock.patch(f"{URL}/api/messages/ab%2F12", json={"id": "ab/12", "done": "2026-11-19T20:00:00+00:00"})
+    aioclient_mock.delete(f"{URL}/api/messages/ab12", json={"deleted": "ab12"})
+    answer = await client(hass).async_update_message("ab/12", done=True, heard=True)
+    assert answer["done"] and aioclient_mock.mock_calls[0][2] == {"done": True, "heard": True}
+    await client(hass).async_delete_message("ab12")
+    assert aioclient_mock.call_count == 2
+
+
+async def test_a_message_that_is_gone(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    aioclient_mock.delete(f"{URL}/api/messages/zz99", status=404, json={"error": "not found"})
+    with pytest.raises(BrainCallRefusedError, match="not found"):
+        await client(hass).async_delete_message("zz99")
+
+
 @pytest.mark.parametrize("status", [200, 503])
 async def test_health_answers_also_when_unhealthy(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, status):
     body = {"status": "ok" if status == 200 else "unhealthy", "problems": [], "sip": "REGISTERED", "line": "idle"}
