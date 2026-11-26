@@ -70,6 +70,7 @@ async def test_discovery_of_an_app_that_does_not_answer(hass: HomeAssistant, bra
 
 async def test_adding_by_hand_shows_the_form_also_on_home_assistant_os(hass: HomeAssistant, brain_call) -> None:
     """No menu and no app path: the form for address and token at once."""
+    hass.config.components.add("hassio")  # what is_hassio looks at: Home Assistant OS with the Supervisor
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     assert result["type"] is FlowResultType.FORM and result["step_id"] == "manual"
 
