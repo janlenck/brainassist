@@ -37,13 +37,30 @@ access rules, the memory. Speech recognition and voice stay with Home Assistant.
 
 ## Installation
 
-Until Brain Assist is in the catalog of the Home Assistant Marketplace, add it as a custom repository:
+### Brain Assist
 
-1. Settings → Marketplace → ⋮ → Custom repositories: `https://github.com/janlenck/brainassist`, type
-   *Integration*. This needs a GitHub connection in the Marketplace.
-2. Install *Brain Assist* and restart Home Assistant.
+1. Settings → Marketplace: search for *Brain Assist* and install it.
+2. Restart Home Assistant.
 
+Not listed yet? Add it as a custom repository first: Settings → Marketplace → ⋮ → Custom repositories:
+`https://github.com/janlenck/brainassist`, type *Integration* (needs a GitHub connection in the Marketplace).
 By hand: copy `custom_components/brainassist` into `custom_components` of your configuration folder and restart.
+
+### Brain Call
+
+Brain Assist does not install or configure Brain Call; that is done once by hand.
+
+**As an app on Home Assistant OS:**
+
+1. Settings → Apps → App store → ⋮ → Repositories: add `https://github.com/janlenck/braincall`.
+2. Install the *BrainCall* app.
+3. Configuration of the app: at least the *Claude API key* (from console.anthropic.com), and in *Callers* the
+   Home Assistant users and devices that may use Assist (see [Who may do what](#who-may-do-what) and the
+   documentation of the app). Without a SIP account Brain Call only answers Assist.
+4. Start the app.
+
+**On another computer:** see the [Brain Call README](https://github.com/janlenck/braincall). Note its address and
+the API token.
 
 ## Two agents: Voice and Text
 
@@ -67,23 +84,14 @@ The names follow the language of the Home Assistant interface.
 
 1. **Brain Call:** add the people and devices that may use Assist to *Callers* (see
    [Who may do what](#who-may-do-what)).
-2. **Integration:** Settings → Devices & services → Add integration → *Brain Assist*. On Home Assistant OS it asks
-   where Brain Call runs:
-   - **As an app on this system:** a running Brain Call app is used, a stopped one is started. If it is not
-     installed, Brain Assist says what it will do and does it only after you agree: add the repository
-     `https://github.com/janlenck/braincall` to the app store, install the app, put the Claude API key and one
-     administrator (a Home Assistant user) into its configuration, start it. Phone, memory and everything else
-     stay in the app configuration.
-   - **On another computer, or by hand:** address and token. As an app on the same system:
-     `http://127.0.0.1:8099`. The token is in `api-token.txt` in the folder of the app
+2. **Integration**, one of two ways:
+   - **Discovered (Brain Call app 1.13.0 or newer):** as soon as the app runs, Settings → Devices & services shows
+     *Brain Assist* as discovered: confirm, nothing to type. A new token reaches the integration the same way at
+     the next start of the app.
+   - **By hand:** Settings → Devices & services → Add integration → *Brain Assist*, then address and token. As an
+     app on the same system: `http://127.0.0.1:8099`. The token is in `api-token.txt` in the folder of the app
      (`/app_configs/98055a04_braincall`, Samba or File editor), or it is the one you set as *API token* in Brain
-     Call.
-
-   Without the Supervisor (Home Assistant Container or Core) only the second way exists.
-
-   With Brain Call 1.13.0 or newer as an app, Home Assistant also shows *Brain Assist* as **discovered** under
-   Settings → Devices & services as soon as the app runs: confirm, nothing to type. A new token reaches the
-   integration the same way at the next start of the app.
+     Call. This is the only way for Brain Call on another computer and for apps older than 1.13.0.
 3. **Voice assistants:** set them up as below.
 
 ### Recommended setup: two assistants
